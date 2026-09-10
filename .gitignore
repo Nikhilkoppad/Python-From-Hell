@@ -1,0 +1,6 @@
+# Local ChatGPT/session state
+chatgpt-state.json
+
+# Local dependencies/build output
+node_modules/
+dist/

@@ -50,7 +50,8 @@ export class AdaptiveLearningEngine {
     ];
 
     const successes = history.filter((attempt) => attempt.passed).length;
-    const nextStreak = this.calculateStreak(Number(profile.streak ?? 1), profile.lastActiveTimestamp, now);
+    const previousAttemptTimestamp = history.length > 1 ? history[history.length - 2]?.timestamp : profile.lastActiveTimestamp;
+    const nextStreak = this.calculateStreak(Number(profile.streak ?? 1), previousAttemptTimestamp, now);
     const nextProfile: LearningProfile = {
       ...profile,
       skills,

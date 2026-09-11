@@ -2,41 +2,112 @@
 import type { LearningLanguage, RoastIntensity } from '../types';
 import { Bot } from 'lucide-react';
 
-export type AICharacterState = 'idle' | 'thinking' | 'teaching' | 'mocking' | 'angry' | 'celebrating' | 'warning' | 'boss_mode';
+export type AICharacterState =
+  | 'idle'
+  | 'thinking'
+  | 'teaching'
+  | 'mocking'
+  | 'angry'
+  | 'celebrating'
+  | 'warning'
+  | 'boss_mode';
 
 interface AICharacterBannerProps {
   state: AICharacterState;
-  language?: LearningLanguage | string;
-  intensity?: RoastIntensity | string;
+  language: LearningLanguage | string;
+  intensity: RoastIntensity | string;
   customMessage?: string;
-  message?: string;
-  onOpenTutor?: () => void;
+  onOpenTutor: () => void;
 }
 
-export const AICharacterBanner: React.FC<AICharacterBannerProps> = ({ state, language = 'ENGLISH', customMessage, message, onOpenTutor }) => {
+export const AICharacterBanner: React.FC<AICharacterBannerProps> = ({
+  state,
+  language,
+  customMessage,
+  onOpenTutor,
+}) => {
   const isHindi = language === 'HINDI';
-  const config: Record<AICharacterState, { avatar: string; title: string; defaultMsg: string }> = {
-    idle: { avatar: '🤖', title: 'JARVIS // WATCHING', defaultMsg: isHindi ? 'Code likh. Main dekh raha hoon.' : 'Write the code. I am watching.' },
-    thinking: { avatar: '⏳', title: 'JARVIS // RUNNING TRACE', defaultMsg: isHindi ? 'Python tera code execute kar raha hai...' : 'Python is executing your instructions...' },
-    teaching: { avatar: '🧠', title: 'JARVIS // TEACHING', defaultMsg: 'Stop guessing. Understand the concept.' },
-    celebrating: { avatar: '🔥', title: 'JARVIS // CLEARED', defaultMsg: isHindi ? 'Chalo, ek cheez toh sahi chali.' : 'Challenge cleared. Keep going.' },
-    angry: { avatar: '🤬', title: 'JARVIS // DISAPPOINTED', defaultMsg: isHindi ? 'Wahi galti phir se. Traceback padh!' : 'Repeated failure detected. Read the traceback.' },
-    mocking: { avatar: '💀', title: 'JARVIS // WITNESS', defaultMsg: isHindi ? 'Python ne reject maar diya.' : 'Execution failed. Inspect the evidence.' },
-    warning: { avatar: '⚠️', title: 'JARVIS // WARNING', defaultMsg: 'You passed, but I am not calling that mastery yet.' },
-    boss_mode: { avatar: '☠️', title: 'JARVIS // BOSS MODE', defaultMsg: 'No hints. Prove you actually learned it.' },
+
+  const getStateConfig = () => {
+    switch (state) {
+      case 'thinking':
+        return {
+          avatar: '⏳',
+          title: 'JARVIS // RUNNING TRACE',
+          color: 'border-yellow-600/50 bg-yellow-950/20 text-yellow-300',
+          defaultMsg: isHindi ? 'Tera code Python 3.11 engine me execute ho raha hai...' : 'Python runtime is executing your instructions...',
+        };
+      case 'celebrating':
+        return {
+          avatar: '🔥',
+          title: 'JARVIS // CLEARED',
+          color: 'border-emerald-600/50 bg-emerald-950/20 text-emerald-300',
+          defaultMsg: isHindi ? 'Chalo, at least ek cheez sahi chali. Overconfidence mat dikha.' : 'Challenge cleared. Keep your momentum going.',
+        };
+      case 'angry':
+        return {
+          avatar: '🤬',
+          title: 'JARVIS // DISAPPOINTED',
+          color: 'border-red-600 bg-red-950/40 text-red-300',
+          defaultMsg: isHindi ? 'BC, 4 baar wahi galti! Aankh khol ke traceback padh!' : 'Repeated failure pattern detected. Stop guessing and trace your logic!',
+        };
+      case 'mocking':
+        return {
+          avatar: '💀',
+          title: 'JARVIS // WITNESS',
+          color: 'border-red-900/60 bg-slate-900/90 text-red-200',
+          defaultMsg: isHindi ? 'Python ne tera code reject maar diya. Check the error.' : 'Execution failed. Inspect the traceback and rectify the logic.',
+        };
+      case 'warning':
+        return {
+          avatar: '⚠️',
+          title: 'JARVIS // DEPENDENCY WARNING',
+          color: 'border-amber-600/60 bg-amber-950/20 text-amber-300',
+          defaultMsg: isHindi ? 'Bohot saare hints le raha hai bhai. Thoda khud bhi soch.' : 'High AI hint usage detected. Try solving independently for higher mastery.',
+        };
+      case 'boss_mode':
+        return {
+          avatar: '👹',
+          title: 'JARVIS // BOSS PROCTOR',
+          color: 'border-red-500 bg-red-950/60 text-white animate-pulse',
+          defaultMsg: isHindi ? 'BOSS BATTLE ACTIVE: Cerberus ko code se hara!' : 'High-stakes battle active. Prove your Python competence.',
+        };
+      default:
+        return {
+          avatar: '🤖',
+          title: 'JARVIS // HELL PROCTOR',
+          color: 'border-slate-800 bg-slate-900/60 text-slate-300',
+          defaultMsg: isHindi ? 'Code likh aur execute kar. Galti hui toh main dekh raha hoon.' : 'Write your solution and execute. Every attempt is evaluated in real time.',
+        };
+    }
   };
-  const current = config[state] ?? config.idle;
-  const displayMessage = message ?? customMessage ?? current.defaultMsg;
+
+  const config = getStateConfig();
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950/90 p-4 shadow-lg">
-      <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-red-500/30 bg-red-500/10 text-xl">{current.avatar}</div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 text-[10px] font-black tracking-widest text-red-400"><Bot size={13} /> {current.title}</div>
-          <p className="mt-2 text-xs leading-5 text-slate-300">{displayMessage}</p>
+    <div
+      onClick={onOpenTutor}
+      className={`p-3.5 rounded-xl border transition-all cursor-pointer hover:border-red-500 flex items-center justify-between gap-3 ${config.color}`}
+    >
+      <div className="flex items-center gap-3">
+        <div className="text-xl p-1 bg-black/40 rounded-lg border border-slate-800">
+          {config.avatar}
         </div>
-        {onOpenTutor && <button type="button" onClick={onOpenTutor} className="rounded-lg border border-slate-700 px-3 py-2 text-[10px] font-bold text-slate-300 hover:bg-slate-800">AI TUTOR</button>}
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-widest text-red-400 flex items-center gap-1.5">
+            <Bot className="w-3 h-3" />
+            <span>{config.title}</span>
+          </div>
+          <p className="text-xs font-mono text-slate-200 mt-0.5 leading-tight">
+            {customMessage || config.defaultMsg}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-red-400 bg-red-950/60 px-2.5 py-1 rounded-lg border border-red-800">
+          {isHindi ? 'Ask AI →' : 'Consult AI →'}
+        </span>
       </div>
     </div>
   );

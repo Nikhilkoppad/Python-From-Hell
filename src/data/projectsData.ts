@@ -1,4 +1,4 @@
-export interface ProjectFile {
+﻿export interface ProjectFile {
   name: string;
   initialContent: string;
   description: string;
@@ -38,14 +38,16 @@ export const REAL_PROJECTS: PythonProject[] = [
         description: 'Data model definitions for Expense items',
         initialContent: `class Expense:
     def __init__(self, amount: float, category: str, description: str):
-        # TODO: validate and normalize the incoming data.
-        self.amount = amount
-        self.category = category
-        self.description = description
+        self.amount = float(amount)
+        self.category = category.upper().strip()
+        self.description = description.strip()
 
     def to_dict(self):
-        # TODO: return a serializable dictionary.
-        return {}`,
+        return {
+            "amount": self.amount,
+            "category": self.category,
+            "description": self.description
+        }`,
       },
       {
         name: 'ledger.py',
@@ -57,16 +59,18 @@ class ExpenseLedger:
         self.expenses = []
 
     def add_expense(self, amount, category, description):
-        # TODO: reject non-positive amounts and store a normalized Expense.
-        return None
+        if float(amount) <= 0:
+            raise ValueError("Amount must be positive")
+        expense = Expense(amount, category, description)
+        self.expenses.append(expense)
+        return expense
 
     def get_total_by_category(self, category):
-        # TODO: sum matching categories case-insensitively.
-        return 0
+        cat = category.upper().strip()
+        return sum(e.amount for e in self.expenses if e.category == cat)
 
     def get_grand_total(self):
-        # TODO: sum every recorded expense.
-        return 0`,
+        return sum(e.amount for e in self.expenses)`,
       },
       {
         name: 'main.py',
@@ -75,7 +79,8 @@ class ExpenseLedger:
 
 def run_app():
     ledger = ExpenseLedger()
-    # TODO: add sample expenses and print the required totals.
+    ledger.add_expense(50.0, "FOOD", "Hellfire Pizza")
+    ledger.add_expense(120.0, "SERVERS", "Pyodide Cluster")
     print(f"Grand Total: {ledger.get_grand_total()}")
     print(f"Food Total: {ledger.get_total_by_category('FOOD')}")
 

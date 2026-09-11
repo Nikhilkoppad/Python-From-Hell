@@ -1,32 +1,59 @@
-# React + TypeScript + Vite
+# Python From Hell
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Python From Hell is a browser-based adaptive Python learning arena built around real execution, deterministic judging, evidence-based mastery, and a brutal hell-themed teaching style.
 
-Currently, two official plugins are available:
+## What it does
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Runs Python in the browser with Pyodide.
+- Judges challenge results deterministically before AI explains them.
+- Tracks attempts, hints, independence, mistakes, mastery, XP, and streaks.
+- Adapts the next challenge from actual learner evidence.
+- Includes a diagnostic, curriculum map, debugging dungeon, projects, boss fights, achievements, and learner dossier.
+- Uses local Ollama/Gemma for AI tutoring when available, with a local deterministic fallback when it is not.
+- Persists learner progress locally with versioned storage migration.
 
-## React Compiler
+## Development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Requirements:
 
-## Expanding the Oxlint configuration
+- Node.js 22+
+- npm
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+Install dependencies:
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm ci
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Start the development server:
+
+```bash
+npm run dev
+```
+
+Validate the project:
+
+```bash
+npm run lint
+npm run build
+```
+
+## Local AI
+
+The application is designed around a local Ollama provider. Configure the Ollama endpoint/model through the project's existing environment configuration when needed. AI is an interpretation and teaching layer; deterministic runtime execution and judging remain authoritative.
+
+## Architecture
+
+The main learning loop is:
+
+**Learn → Understand → Check → Guided Practice → Code → Execute → Judge → Explain/Roast → Record Evidence → Mastery → Remediation/Next Challenge**
+
+Core areas live under `src/engine`, `src/execution`, `src/ai`, `src/components`, and `src/data`.
+
+## Product principle
+
+Python From Hell is intentionally profane and irreverent, but the profanity is directed at code, mistakes, and situations—not protected characteristics or personal identity. The goal is memorable teaching, not harassment.
+
+## License
+
+MIT. See `LICENSE`.

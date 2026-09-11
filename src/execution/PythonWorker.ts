@@ -32,8 +32,6 @@ const getRuntime = async (): Promise<PyodideInterface> => {
       return loadedRuntime;
     })
     .catch((error) => {
-      // A failed boot must not poison the worker forever. A later execution
-      // should be allowed to retry initialization after the network recovers.
       bootPromise = null;
       throw error;
     });

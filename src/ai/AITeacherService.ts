@@ -1,8 +1,9 @@
 import { AIRouter } from './AIRouter';
 import { LearnerContextManager } from './LearnerContextManager';
+import type { LearningProfile } from '../types/learning';
 
 export type AITutorMode = 'HINT' | 'DEBUG' | 'EXPLAIN' | 'ROAST' | 'CHAT';
-export interface AITutorRequest { mode: AITutorMode; lessonTitle?: string; concept?: string; code?: string; lessonConcept?: string; userCode?: string; terminalOutput?: string; runtimeError?: string | null; expectedOutput?: string; userQuery?: string; profile?: any; progress?: any; failureCount?: number; hintsThisAttempt?: number; }
+export interface AITutorRequest { mode: AITutorMode; lessonTitle?: string; concept?: string; code?: string; lessonConcept?: string; userCode?: string; terminalOutput?: string; runtimeError?: string | null; expectedOutput?: string; userQuery?: string; profile?: LearningProfile; progress?: LearningProfile; failureCount?: number; hintsThisAttempt?: number; }
 export interface AITeacherResponse { message: string; text?: string; source: 'LOCAL_OLLAMA' | 'LOCAL_FALLBACK'; mode?: AITutorMode; modelUsed?: string; providerUsed?: string; latencyMs?: number; category?: string; shouldTeach?: boolean; shouldDebug?: boolean; shouldRemoveScaffolding?: boolean; }
 
 export class AITeacherService {
@@ -16,7 +17,7 @@ export class AITeacherService {
     const expectedOutput = request.expectedOutput ?? '';
     const failureCount = request.failureCount ?? 0;
     const hintsThisAttempt = request.hintsThisAttempt ?? 0;
-    const systemPrompt = LearnerContextManager.buildSystemPrompt(profile as any);
+    const systemPrompt = LearnerContextManager.buildSystemPrompt(profile);
     const userPrompt = `JARVIS // HELL PROCTOR\nMODE: ${request.mode}\nLESSON: ${lessonTitle}\nCONCEPT: ${concept}\nFAILURES: ${failureCount}\nHINTS: ${hintsThisAttempt}\nCODE:\n${code || '(empty)'}\nTERMINAL:\n${terminalOutput || '(nothing)'}\nERROR:\n${runtimeError || '(none)'}\nEXPECTED:\n${expectedOutput || '(not supplied)'}\nREQUEST:\n${request.userQuery || '(none)'}\n\nTeach simply, diagnose deterministic evidence first, then give one useful next step.`;
     try {
       const health = await AIRouter.getClient().checkHealth();

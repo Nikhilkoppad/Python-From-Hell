@@ -1,109 +1,52 @@
 import { AIRouter } from './AIRouter';
 import { LearnerContextManager } from './LearnerContextManager';
 import type { LearningProfile } from '../types/learning';
+import type { UserProgress } from '../types';
 
 export type AITutorMode = 'HINT' | 'DEBUG' | 'EXPLAIN' | 'ROAST' | 'CHAT';
-
 export interface AITutorRequest {
-  mode: AITutorMode;
-  lessonTitle?: string;
-  lessonConcept?: string;
-  concept?: string;
-  code?: string;
-  userCode?: string;
-  terminalOutput?: string;
-  runtimeError?: string | null;
-  expectedOutput?: string;
-  userQuery?: string;
-  profile?: LearningProfile;
-  progress?: LearningProfile;
-  failureCount?: number;
-  hintsThisAttempt?: number;
+  mode: AITutorMode; lessonTitle?: string; lessonConcept?: string; concept?: string; code?: string; userCode?: string;
+  terminalOutput?: string; runtimeError?: string | null; expectedOutput?: string; userQuery?: string;
+  profile?: LearningProfile | UserProgress; progress?: LearningProfile | UserProgress; failureCount?: number; hintsThisAttempt?: number;
 }
-
 export interface AITeacherResponse {
-  message: string;
-  text?: string;
-  source: 'LOCAL_OLLAMA' | 'LOCAL_FALLBACK';
-  mode: AITutorMode;
-  modelUsed?: string;
-  providerUsed?: string;
-  shouldTeach?: boolean;
-  shouldDebug?: boolean;
-  shouldRemoveScaffolding?: boolean;
+  message: string; text?: string; source: 'LOCAL_OLLAMA' | 'LOCAL_FALLBACK'; mode?: AITutorMode; modelUsed?: string; providerUsed?: string; latencyMs?: number; category?: string;
+  shouldTeach?: boolean; shouldDebug?: boolean; shouldRemoveScaffolding?: boolean;
 }
-
-export { AITeacherResponse as AITutorResponse };
+export type AITutorResponse = AITeacherResponse;
 
 export class AITeacherService {
   static async requestGuidance(request: AITutorRequest): Promise<AITeacherResponse> {
-    const profile = request.profile ?? request.progress;
+    const rawProfile = request.profile ?? request.progress;
+    const profile = rawProfile as LearningProfile | undefined;
     const code = request.code ?? request.userCode ?? '';
     const concept = request.concept ?? request.lessonConcept ?? 'current Python concept';
     const lessonTitle = request.lessonTitle ?? 'Python lesson';
     const failureCount = request.failureCount ?? 0;
     const hintsThisAttempt = request.hintsThisAttempt ?? 0;
-
-    const userMessage = LearnerContextManager.buildUserMessage({
-      mode: request.mode,
-      lessonTitle,
-      concept,
-      code,
-      terminalOutput: request.terminalOutput ?? '',
-      runtimeError: request.runtimeError ?? '',
-      expectedOutput: request.expectedOutput ?? '',
-      userQuery: request.userQuery ?? '',
-      failureCount,
-      hintsThisAttempt,
-    });
+    const userMessage = LearnerContextManager.buildUserMessage({ mode: request.mode, lessonTitle, concept, code, terminalOutput: request.terminalOutput ?? '', runtimeError: request.runtimeError ?? '', expectedOutput: request.expectedOutput ?? '', userQuery: request.userQuery ?? '', failureCount, hintsThisAttempt });
 
     if (!profile) return this.fallback({ ...request, code, concept, lessonTitle, failureCount, hintsThisAttempt });
-
     const systemPrompt = LearnerContextManager.buildSystemPrompt(profile);
-
     try {
       const health = await AIRouter.getClient().checkHealth();
       if (!health.online) return this.fallback({ ...request, code, concept, lessonTitle, failureCount, hintsThisAttempt });
-
-      const result = await AIRouter.routeAI({
-        systemPrompt,
-        userPrompt: userMessage,
-        temperature: request.mode === 'ROAST' ? 0.9 : 0.65,
-        maxTokens: 700,
-      });
+      const result = await AIRouter.routeAI({ systemPrompt, userPrompt: userMessage, temperature: request.mode === 'ROAST' ? 0.9 : 0.65, maxTokens: 700 });
       const message = result.content.trim();
       if (!message) return this.fallback({ ...request, code, concept, lessonTitle, failureCount, hintsThisAttempt });
-
-      return { message, text: message, source: 'LOCAL_OLLAMA', mode: request.mode, modelUsed: result.modelUsed, providerUsed: result.providerUsed, shouldTeach: request.mode === 'DEBUG' || failureCount >= 2, shouldDebug: Boolean(request.runtimeError) || failureCount >= 2, shouldRemoveScaffolding: hintsThisAttempt === 0 && failureCount === 0 };
-    } catch {
-      return this.fallback({ ...request, code, concept, lessonTitle, failureCount, hintsThisAttempt });
-    }
+      return { message, text: message, source: 'LOCAL_OLLAMA', mode: request.mode, modelUsed: result.modelUsed, providerUsed: result.providerUsed, latencyMs: result.latencyMs, category: result.category, shouldTeach: request.mode === 'DEBUG' || failureCount >= 2, shouldDebug: Boolean(request.runtimeError) || failureCount >= 2, shouldRemoveScaffolding: hintsThisAttempt === 0 && failureCount === 0 };
+    } catch { return this.fallback({ ...request, code, concept, lessonTitle, failureCount, hintsThisAttempt }); }
   }
 
   private static fallback(request: AITutorRequest & { code?: string; concept?: string; lessonTitle?: string; failureCount?: number; hintsThisAttempt?: number }): AITeacherResponse {
-    const code = request.code ?? '';
-    const concept = request.concept ?? 'current Python concept';
-    const failureCount = request.failureCount ?? 0;
-    const hintsUsed = request.hintsThisAttempt ?? 0;
-    let message: string;
-
+    const code = request.code ?? ''; const concept = request.concept ?? 'current Python concept'; const failureCount = request.failureCount ?? 0; const hintsUsed = request.hintsThisAttempt ?? 0; let message: string;
     switch (request.mode) {
-      case 'DEBUG':
-        message = request.runtimeError ? `JARVIS // DEBUG\n\nRead the final traceback line first.\n\n${request.runtimeError}\n\nFind the failing line and fix the smallest broken assumption.` : 'JARVIS // DEBUG\n\nTrace inputs, variables, conditions, loops, and final output one step at a time.';
-        break;
-      case 'EXPLAIN':
-        message = `JARVIS // EXPLAIN\n\n${this.explainConcept(concept)}`;
-        break;
-      case 'ROAST':
-        message = `JARVIS // ROAST\n\nYour code has achieved ${failureCount > 1 ? 'a suspiciously consistent failure pattern' : 'an impressive amount of confidence for so little evidence'}.\n\nTechnical observation: inspect the ${concept} logic before changing random lines.`;
-        break;
-      case 'CHAT':
-        message = 'JARVIS // LOCAL MODE\n\nGemma is unavailable right now. Ask about the current Python concept and we will dissect it.';
-        break;
-      default:
-        message = this.hintConcept(concept, code, hintsUsed);
+      case 'DEBUG': message = request.runtimeError ? `JARVIS // DEBUG\n\nRead the final traceback line first.\n\n${request.runtimeError}\n\nFind the failing line and fix the smallest broken assumption.` : 'JARVIS // DEBUG\n\nTrace inputs, variables, conditions, loops, and final output one step at a time.'; break;
+      case 'EXPLAIN': message = `JARVIS // EXPLAIN\n\n${this.explainConcept(concept)}`; break;
+      case 'ROAST': message = `JARVIS // ROAST\n\nYour code has achieved ${failureCount > 1 ? 'a suspiciously consistent failure pattern' : 'an impressive amount of confidence for so little evidence'}.\n\nTechnical observation: inspect the ${concept} logic before changing random lines.`; break;
+      case 'CHAT': message = 'JARVIS // LOCAL MODE\n\nGemma is unavailable right now. Ask about the current Python concept and we will dissect it.'; break;
+      default: message = this.hintConcept(concept, code, hintsUsed);
     }
-
     return { message, text: message, source: 'LOCAL_FALLBACK', mode: request.mode, modelUsed: 'local-fallback', providerUsed: 'ollama', shouldTeach: failureCount >= 2 || request.mode === 'EXPLAIN', shouldDebug: Boolean(request.runtimeError) || failureCount >= 2, shouldRemoveScaffolding: hintsUsed === 0 && failureCount === 0 };
   }
 
@@ -123,15 +66,7 @@ export class AITeacherService {
   }
 
   private static explainConcept(concept: string): string {
-    const explanations: Record<string, string> = {
-      'print()': 'print() displays a value in the terminal. It does not store that value.',
-      variables: 'A variable is a name referring to a value. Assignment with = binds that name to a value.',
-      strings: 'A string is text represented by quotes. Python treats quoted text differently from numbers and variable names.',
-      conditionals: 'Conditionals let Python choose a block based on whether a condition is True or False.',
-      loops: 'Loops repeat work. for usually iterates over a sequence or range; while continues while its condition is true.',
-      lists: 'A list is an ordered, mutable collection. Python uses zero-based indexing.',
-      functions: 'A function packages reusable logic. Parameters receive input and return sends a result back.',
-    };
+    const explanations: Record<string, string> = { 'print()': 'print() displays a value in the terminal. It does not store that value.', variables: 'A variable is a name referring to a value. Assignment with = binds that name to a value.', strings: 'A string is text represented by quotes. Python treats quoted text differently from numbers and variable names.', conditionals: 'Conditionals let Python choose a block based on whether a condition is True or False.', loops: 'Loops repeat work. for usually iterates over a sequence or range; while continues while its condition is true.', lists: 'A list is an ordered, mutable collection. Python uses zero-based indexing.', functions: 'A function packages reusable logic. Parameters receive input and return sends a result back.' };
     return explanations[concept] ?? `Start with the smallest definition of ${concept}, then connect it to the code in front of you.`;
   }
 }

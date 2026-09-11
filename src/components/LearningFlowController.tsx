@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ArrowRight, Brain, CheckCircle2, Flame, LockKeyhole, Sparkles } from 'lucide-react';
-import { CURRICULUM, findLesson } from '../data/curriculum';
+import { CURRICULUM } from '../data/curriculum';
 import { loadProgress } from '../utils/progressPersistence';
 
 interface LearningFlowControllerProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 type FlowStage = 'BRIEFING' | 'CHECK' | 'READY' | 'ARENA';
@@ -22,14 +22,15 @@ export function LearningFlowController({ children }: LearningFlowControllerProps
   const [lessonId, setLessonId] = useState(getCurrentLessonId);
   const [stage, setStage] = useState<FlowStage>(() => {
     const id = getCurrentLessonId();
-    return sessionStorage.getItem(`${FLOW_KEY}:${id}`) === 'done'
-      ? 'ARENA'
-      : 'BRIEFING';
+    return sessionStorage.getItem(`${FLOW_KEY}:${id}`) === 'done' ? 'ARENA' : 'BRIEFING';
   });
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answered, setAnswered] = useState(false);
 
-  const lesson = useMemo(() => findLesson(lessonId), [lessonId]);
+  const lesson = useMemo(
+    () => CURRICULUM.flatMap((level) => level.lessons).find((item) => item.id === lessonId),
+    [lessonId],
+  );
 
   useEffect(() => {
     const sync = () => {
@@ -40,9 +41,7 @@ export function LearningFlowController({ children }: LearningFlowControllerProps
       setSelectedAnswer(null);
       setAnswered(false);
       setStage(
-        sessionStorage.getItem(`${FLOW_KEY}:${nextLessonId}`) === 'done'
-          ? 'ARENA'
-          : 'BRIEFING'
+        sessionStorage.getItem(`${FLOW_KEY}:${nextLessonId}`) === 'done' ? 'ARENA' : 'BRIEFING',
       );
     };
 
@@ -55,9 +54,7 @@ export function LearningFlowController({ children }: LearningFlowControllerProps
     };
   }, [lessonId]);
 
-  if (!lesson || stage === 'ARENA') {
-    return <>{children}</>;
-  }
+  if (!lesson || stage === 'ARENA') return <>{children}</>;
 
   const check = lesson.knowledgeCheck;
   const correct = selectedAnswer === check.correctAnswer;
@@ -74,8 +71,7 @@ export function LearningFlowController({ children }: LearningFlowControllerProps
   };
 
   const continueFromCheck = () => {
-    if (!correct) return;
-    setStage('READY');
+    if (correct) setStage('READY');
   };
 
   const enterArena = () => {
@@ -127,9 +123,8 @@ export function LearningFlowController({ children }: LearningFlowControllerProps
                   {section.exampleCode && (
                     <pre className="mt-4 overflow-x-auto rounded-lg border border-slate-800 bg-[#07090d] p-3 text-[11px] leading-5 text-slate-300">{section.exampleCode}</pre>
                   )}
-                  {section.exampleOutput && (
-                    <div className="mt-2 text-[10px] text-emerald-400">→ {section.exampleOutput}</div>
-                  )}
+                  {section.exampleOutput && <div className="mt-2 text-[10px] text-emerald-400">→ {section.exampleOutput}</div>}
+                  {section.teacherNote && <div className="mt-3 text-[10px] leading-5 text-amber-300/80">Teacher note: {section.teacherNote}</div>}
                 </article>
               ))}
             </section>
@@ -158,15 +153,12 @@ export function LearningFlowController({ children }: LearningFlowControllerProps
           <div className="mx-auto max-w-2xl">
             <section className="rounded-2xl border border-slate-800 bg-[#0b0e13] p-6 md:p-8">
               <div className="mb-6 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-300">
-                  <Brain size={19} />
-                </div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-300"><Brain size={19} /></div>
                 <div>
                   <div className="text-[9px] font-bold uppercase tracking-widest text-purple-400">Knowledge check</div>
                   <div className="mt-1 text-xs text-slate-500">Prove you understood before touching the code.</div>
                 </div>
               </div>
-
               <h1 className="text-xl font-bold leading-8 text-white">{check.question}</h1>
               <div className="mt-6 space-y-3">
                 {check.options.map((option, index) => {
@@ -174,33 +166,13 @@ export function LearningFlowController({ children }: LearningFlowControllerProps
                   const isCorrect = answered && index === check.correctAnswer;
                   const isWrong = answered && isSelected && !correct;
                   return (
-                    <button
-                      type="button"
-                      key={option}
-                      onClick={() => chooseAnswer(index)}
-                      className={`w-full rounded-xl border p-4 text-left text-xs transition ${
-                        isCorrect
-                          ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
-                          : isWrong
-                            ? 'border-red-500/40 bg-red-500/10 text-red-300'
-                            : isSelected
-                              ? 'border-purple-500/40 bg-purple-500/10 text-white'
-                              : 'border-slate-800 bg-[#080a0e] text-slate-400 hover:border-slate-700 hover:text-white'
-                      }`}
-                    >
-                      <span className="mr-3 font-mono text-slate-600">{String.fromCharCode(65 + index)}.</span>
-                      {option}
+                    <button type="button" key={option} onClick={() => chooseAnswer(index)} className={`w-full rounded-xl border p-4 text-left text-xs transition ${isCorrect ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300' : isWrong ? 'border-red-500/40 bg-red-500/10 text-red-300' : isSelected ? 'border-purple-500/40 bg-purple-500/10 text-white' : 'border-slate-800 bg-[#080a0e] text-slate-400 hover:border-slate-700 hover:text-white'}`}>
+                      <span className="mr-3 font-mono text-slate-600">{String.fromCharCode(65 + index)}.</span>{option}
                     </button>
                   );
                 })}
               </div>
-
-              {answered && (
-                <div className={`mt-5 rounded-xl border p-4 text-xs leading-6 ${correct ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-200' : 'border-red-500/20 bg-red-500/5 text-red-200'}`}>
-                  {correct ? 'Correct. ' : 'Not yet. Read this carefully. '}{check.explanation}
-                </div>
-              )}
-
+              {answered && <div className={`mt-5 rounded-xl border p-4 text-xs leading-6 ${correct ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-200' : 'border-red-500/20 bg-red-500/5 text-red-200'}`}>{correct ? 'Correct. ' : 'Not yet. Read this carefully. '}{check.explanation}</div>}
               <button type="button" disabled={!correct} onClick={continueFromCheck} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-4 text-xs font-black uppercase tracking-widest text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-30">
                 {correct ? 'Knowledge confirmed — continue' : 'Choose the correct answer'} <ArrowRight size={15} />
               </button>
@@ -214,20 +186,13 @@ export function LearningFlowController({ children }: LearningFlowControllerProps
               <CheckCircle2 size={48} className="mx-auto text-emerald-400" />
               <div className="mt-5 text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-400">Concept verified</div>
               <h1 className="mt-3 text-3xl font-black text-white">Now prove it with Python.</h1>
-              <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-slate-400">
-                You have seen the concept, the examples, the terminology, and passed the knowledge check. The arena is next. Your code will be executed for real and judged against the challenge requirements.
-              </p>
+              <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-slate-400">You have seen the concept, the examples, the terminology, and passed the knowledge check. The arena is next. Your code will be executed for real and judged against the challenge requirements.</p>
               <div className="mt-7 grid gap-3 text-left sm:grid-cols-3">
                 {['Write the code', 'Run real Python', 'Learn from the verdict'].map((item, index) => (
-                  <div key={item} className="rounded-lg border border-slate-800 bg-[#080a0e] p-3">
-                    <div className="text-[9px] font-bold text-slate-600">0{index + 1}</div>
-                    <div className="mt-2 text-xs font-bold text-slate-300">{item}</div>
-                  </div>
+                  <div key={item} className="rounded-lg border border-slate-800 bg-[#080a0e] p-3"><div className="text-[9px] font-bold text-slate-600">0{index + 1}</div><div className="mt-2 text-xs font-bold text-slate-300">{item}</div></div>
                 ))}
               </div>
-              <button type="button" onClick={enterArena} className="mt-7 flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-4 text-xs font-black uppercase tracking-widest text-white transition hover:bg-red-500">
-                Enter the coding arena <LockKeyhole size={15} />
-              </button>
+              <button type="button" onClick={enterArena} className="mt-7 flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-4 text-xs font-black uppercase tracking-widest text-white transition hover:bg-red-500">Enter the coding arena <LockKeyhole size={15} /></button>
             </section>
           </div>
         )}

@@ -1,7 +1,7 @@
 import type { AdaptiveDecision, AttemptHistoryEntry, ChallengeType, LearningProfile, Skill } from '../types/learning';
 import { SkillMasteryEngine } from './SkillMasteryEngine';
 
-type AttemptInput = {
+type LegacyAttemptInput = {
   profile: LearningProfile;
   challengeId: string;
   lessonId: string;
@@ -17,9 +17,9 @@ type AttemptInput = {
 };
 
 export class AdaptiveLearningEngine {
-  public static recordAttempt(input: AttemptInput): { profile: LearningProfile; decision: AdaptiveDecision } {
+  public static recordAttempt(input: LegacyAttemptInput): { profile: LearningProfile; decision: any } {
     const profile = input.profile;
-    const skills: Record<string, Skill> = { ...(profile.skills ?? {}) };
+    const skills: Record<string, Skill> = { ...((profile.skills ?? {}) as Record<string, Skill>) };
     const existing = skills[input.topicId] ?? SkillMasteryEngine.createSkill(input.topicId, input.topicId, `Evidence tracked for ${input.topicId}`);
     const challengeType = input.challengeType ?? this.inferChallengeType(input.challengeId);
     const difficulty = Math.max(1, Math.min(5, Number(input.difficulty ?? 1)));
@@ -33,8 +33,8 @@ export class AdaptiveLearningEngine {
     skills[input.topicId] = updatedSkill;
 
     const now = Date.now();
-    const history: AttemptHistoryEntry[] = [
-      ...(profile.attemptHistory ?? []),
+    const history = [
+      ...((profile.attemptHistory ?? []) as Array<AttemptHistoryEntry & { challengeId?: string; lessonId?: string; independent?: boolean; challengeType?: ChallengeType }>),
       {
         challengeId: input.challengeId,
         lessonId: input.lessonId,
@@ -46,8 +46,6 @@ export class AdaptiveLearningEngine {
         timestamp: now,
         independent: input.hintsUsed === 0,
         challengeType,
-        code: input.code,
-        output: input.output,
       },
     ];
 
@@ -81,8 +79,8 @@ export class AdaptiveLearningEngine {
           ? updatedSkill.evidence.hintsUsed / updatedSkill.evidence.attempts
           : 0,
       },
-      weakTopics: Object.values(skills).filter((skill) => skill.weak).map((skill) => skill.id),
-      masteredTopics: Object.values(skills).filter((skill) => skill.masteryLevel === 'MASTERED').map((skill) => skill.id),
+      weakTopics: Object.values(skills).filter((skill: Skill) => skill.weak).map((skill: Skill) => skill.id),
+      masteredTopics: Object.values(skills).filter((skill: Skill) => skill.masteryLevel === 'MASTERED').map((skill: Skill) => skill.id),
       currentTopicId: input.topicId,
       lastActiveTimestamp: now,
       recentMistakes: input.passed
@@ -100,18 +98,22 @@ export class AdaptiveLearningEngine {
           ].slice(-20),
     };
 
-    const decision: AdaptiveDecision = {
-      ...this.decideNextAction(
-        nextProfile,
-        updatedSkill,
-        input.passed,
-        challengeType,
-        difficulty,
-        input.hintsUsed,
-        input.errorType,
-      ),
-      topicId: input.topicId,
-    };
+    const canonical = this.decideNextAction(
+      nextProfile,
+      updatedSkill,
+      input.passed,
+      challengeType,
+      difficulty,
+      input.hintsUsed,
+      input.errorType,
+    );
+
+    let action = canonical.action as string;
+    if (action === 'TEACH_AGAIN') action = 'MICRO_LESSON';
+    if (action === 'DEBUG_CHALLENGE') action = 'DEBUG';
+    if (action === 'INDEPENDENT_CHALLENGE') action = 'INDEPENDENT_RETRY';
+
+    const decision = { ...canonical, action, topicId: input.topicId };
     nextProfile.lastDecision = decision;
     return { profile: nextProfile, decision };
   }
@@ -166,49 +168,11 @@ export class AdaptiveLearningEngine {
     const e = skill.evidence;
     return skill.unlocked && !(profile.weakTopics ?? []).includes(skill.id) && e.attempts >= 4 && this.calculateAccuracy(e) >= 0.8 && this.calculateIndependence(e) >= 0.75 && this.countEvidenceTypes(e) >= 2;
   }
-
-  public static needsRemediation(skill: Skill): boolean {
-    const e = skill.evidence;
-    return e.attempts >= 2 && (this.calculateAccuracy(e) < 0.5 || e.failures >= 3 || e.recentErrors.length >= 3);
-  }
-
-  public static hasHintDependency(skill: Skill): boolean {
-    const e = skill.evidence;
-    return e.attempts >= 3 && (e.hintsUsed >= 5 || (e.assistedSuccesses > e.independentSuccesses * 2 && e.assistedSuccesses >= 3));
-  }
-
-  private static inferChallengeType(challengeId: string): ChallengeType {
-    const id = challengeId.toLowerCase();
-    if (id.includes('predict')) return 'PREDICT';
-    if (id.includes('trace')) return 'TRACE';
-    if (id.includes('debug')) return 'DEBUG';
-    if (id.includes('fix')) return 'FIX';
-    if (id.includes('explain')) return 'EXPLAIN';
-    if (id.includes('refactor')) return 'REFACTOR';
-    if (id.includes('boss')) return 'BOSS';
-    return 'BUILD';
-  }
-
-  private static calculateStreak(currentStreak: number, lastActiveTimestamp: unknown, now: number): number {
-    const last = typeof lastActiveTimestamp === 'string' || typeof lastActiveTimestamp === 'number'
-      ? new Date(lastActiveTimestamp).getTime()
-      : NaN;
-    if (!Number.isFinite(last)) return Math.max(1, currentStreak);
-    const lastDay = new Date(last);
-    const currentDay = new Date(now);
-    lastDay.setHours(0, 0, 0, 0);
-    currentDay.setHours(0, 0, 0, 0);
-    const dayGap = Math.round((currentDay.getTime() - lastDay.getTime()) / 86_400_000);
-    if (dayGap === 0) return Math.max(1, currentStreak);
-    if (dayGap === 1) return Math.max(1, currentStreak + 1);
-    return 1;
-  }
-
-  private static calculateOverallMastery(skills: Record<string, Skill>): number {
-    const values = Object.values(skills).map((skill) => skill.mastery);
-    return values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0;
-  }
-
+  public static needsRemediation(skill: Skill): boolean { const e = skill.evidence; return e.attempts >= 2 && (this.calculateAccuracy(e) < 0.5 || e.failures >= 3 || e.recentErrors.length >= 3); }
+  public static hasHintDependency(skill: Skill): boolean { const e = skill.evidence; return e.attempts >= 3 && (e.hintsUsed >= 5 || (e.assistedSuccesses > e.independentSuccesses * 2 && e.assistedSuccesses >= 3)); }
+  private static inferChallengeType(challengeId: string): ChallengeType { const id = challengeId.toLowerCase(); if (id.includes('predict')) return 'PREDICT'; if (id.includes('trace')) return 'TRACE'; if (id.includes('debug')) return 'DEBUG'; if (id.includes('fix')) return 'FIX'; if (id.includes('explain')) return 'EXPLAIN'; if (id.includes('refactor')) return 'REFACTOR'; if (id.includes('boss')) return 'BOSS'; return 'BUILD'; }
+  private static calculateStreak(currentStreak: number, lastActiveTimestamp: unknown, now: number): number { const last = typeof lastActiveTimestamp === 'string' || typeof lastActiveTimestamp === 'number' ? new Date(lastActiveTimestamp).getTime() : NaN; if (!Number.isFinite(last)) return Math.max(1, currentStreak); const lastDay = new Date(last); const currentDay = new Date(now); lastDay.setHours(0, 0, 0, 0); currentDay.setHours(0, 0, 0, 0); const dayGap = Math.round((currentDay.getTime() - lastDay.getTime()) / 86_400_000); if (dayGap === 0) return Math.max(1, currentStreak); if (dayGap === 1) return Math.max(1, currentStreak + 1); return 1; }
+  private static calculateOverallMastery(skills: Record<string, Skill>): number { const values = Object.values(skills).map((skill) => skill.mastery); return values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0; }
   private static calculateAccuracy(e: Skill['evidence']): number { return e.attempts ? e.successes / e.attempts : 0; }
   private static calculateIndependence(e: Skill['evidence']): number { return e.successes ? e.independentSuccesses / e.successes : 0; }
   private static countEvidenceTypes(e: Skill['evidence']): number { return Number(e.predictSuccesses > 0) + Number(e.debugSuccesses > 0) + Number(e.buildSuccesses > 0) + Number(e.explainSuccesses > 0); }

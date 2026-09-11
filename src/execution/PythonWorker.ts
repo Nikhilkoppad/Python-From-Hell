@@ -45,7 +45,7 @@ self.onmessage = async (event: MessageEvent<ExecuteRequest>) => {
 
     pyodide.setStdout({ batched: (line) => stdout.push(line) });
     pyodide.setStderr({ batched: (line) => stderr.push(line) });
-    await pyodide.runPythonAsync(code);
+    await pyodide.runPythonAsync(`exec(${JSON.stringify(code)}, {})`);
 
     post({
       type: 'result',

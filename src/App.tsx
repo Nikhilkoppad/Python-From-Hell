@@ -13,7 +13,7 @@ import { AIRouter } from './ai/AIRouter';
 import { AITeacherService } from './ai/AITeacherService';
 import { JarvisProctorEngine } from './ai/JarvisProctorEngine';
 import { loadProgress, saveProgress } from './utils/progressPersistence';
-import type { AIState, LearningPhase, LearningProfile } from './types/learning';
+import type { AIState, AdaptiveDecision, LearningPhase, LearningProfile } from './types/learning';
 import { AITutor } from './components/AITutor';
 import { AICharacterBanner } from './components/AICharacterBanner';
 import { CurriculumMap } from './components/Curriculum/CurriculumMap';
@@ -45,7 +45,7 @@ const DEFAULT_PROGRESS: AppProgress = {
   totalAttempts: 0, successfulAttempts: 0, independentSolves: 0, totalHintsUsed: 0, attemptHistory: [],
   recentMistakes: [], currentTopicId: 'l1_1_print', lastDecision: undefined,
 };
-function phaseForChallenge(challenge: Challenge, failures: number, decision?: string): ArenaPhase {
+function phaseForChallenge(challenge: Challenge, failures: number, decision?: AdaptiveDecision['action']): ArenaPhase {
   if (decision === 'TEACH_AGAIN') return 'TEACH';
   if (decision === 'DEBUG_CHALLENGE') return 'DEBUG';
   if (decision === 'INDEPENDENT_CHALLENGE') return 'INDEPENDENT';
@@ -145,10 +145,10 @@ export default function App() {
   }, []);
   useEffect(() => () => { pythonRuntime.dispose(); }, []);
   const updateProgress = useCallback((next: AppProgress) => { setProgress(next); saveProgress(next); }, []);
-  const moveToNextChallenge = useCallback((profile: AppProgress, decision: any) => {
-    const action = String(decision?.action ?? 'CONTINUE');
+  const moveToNextChallenge = useCallback((profile: AppProgress, decision: AdaptiveDecision & { topicId: string }) => {
+    const action = decision?.action ?? 'CONTINUE';
     if (action === 'TEACH_AGAIN' || action === 'DEBUG_CHALLENGE' || action === 'INDEPENDENT_CHALLENGE') {
-      updateProgress({ ...profile, currentChallengeIndex: progress.currentChallengeIndex, currentTopicId: currentLesson.id });
+      updateProgress({ ...profile, currentChallengeIndex: profile.currentChallengeIndex, currentTopicId: currentLesson.id });
       return;
     }
     if (action === 'BOSS_CHALLENGE') {
@@ -156,7 +156,7 @@ export default function App() {
       setModal('boss');
       return;
     }
-    const nextIndex = selectAdaptiveIndex(currentLesson, progress.currentChallengeIndex, action, Number(decision?.recommendedDifficulty ?? currentChallenge.difficulty ?? 1));
+    const nextIndex = selectAdaptiveIndex(currentLesson, profile.currentChallengeIndex, action, Number(decision?.recommendedDifficulty ?? currentChallenge.difficulty ?? 1));
     if (nextIndex < currentLesson.challenges.length) { updateProgress({ ...profile, currentChallengeIndex: nextIndex, currentTopicId: currentLesson.id }); return; }
     const currentLevelIndex = CURRICULUM.findIndex(level => level.lessons.some(lesson => lesson.id === currentLesson.id));
     const currentLevel = CURRICULUM[currentLevelIndex];
@@ -177,15 +177,16 @@ export default function App() {
       const error = typeof result === 'object' ? result?.error ?? result?.stderr ?? '' : '';
       setTerminalOutput(output); setRuntimeError(error);
       const judgment = JudgmentEngine.evaluate(currentChallenge, code, output, error);
-      const passed = Boolean((judgment as any)?.passed ?? (judgment as any)?.success);
-      const errorType = (judgment as any)?.errorType ?? (error ? 'runtime_error' : 'output_mismatch');
+      const passed = Boolean(judgment.passed);
+      const errorType = judgment.errorType ?? (error ? 'runtime_error' : 'output_mismatch');
       setVerdict(passed ? 'passed' : 'failed');
       if (passed) {
         setAiState('celebrating');
         const learningResult = AdaptiveLearningEngine.recordAttempt({ profile: progress, challengeId: currentChallenge.id, lessonId: currentLesson.id, topicId: currentLesson.id, passed: true, hintsUsed: hintsThisAttempt, code, output, runtimeError: undefined, errorType: undefined, challengeType: currentChallenge.type, difficulty: currentChallenge.difficulty });
         const achievementResult = AchievementSystem.evaluateAchievements(learningResult.profile);
         const completedAchievements = achievementResult.unlockedIds;
-        const nextProfile: AppProgress = { ...progress, ...learningResult.profile, achievements: completedAchievements ?? progress.achievements ?? [], lastActiveTimestamp: Date.now() };
+        const xpGain = 10 + currentChallenge.difficulty * 5;
+        const nextProfile: AppProgress = { ...progress, ...learningResult.profile, xp: Number(learningResult.profile.xp ?? 0) + xpGain, achievements: completedAchievements ?? progress.achievements ?? [], lastActiveTimestamp: Date.now() };
         updateProgress(nextProfile);
         const observation = JarvisProctorEngine.observe({ phase: phase as LearningPhase, passed: true, failureCount, hintsThisAttempt, runtimeError: '' });
         setJarvisMessage(observation.message ?? 'Against all available evidence, you actually did it.');
@@ -200,10 +201,10 @@ export default function App() {
         if (learningResult.decision.action === 'TEACH_AGAIN') { setShowTeaching(true); setJarvisMessage('Three failures. Stop hammering RUN like a confused monkey. We are going back to the concept.'); }
         else if (learningResult.decision.action === 'DEBUG_CHALLENGE') setJarvisMessage('You are repeating the same mistake. Congratulations: you have discovered debugging.');
         else if (learningResult.decision.action === 'INDEPENDENT_CHALLENGE') setJarvisMessage('You are becoming addicted to hints. No more training wheels. Solve it yourself.');
-        else setJarvisMessage(observation.message ?? (judgment as any)?.explanation ?? 'Nope. That code belongs in the evidence locker.');
+        else setJarvisMessage(observation.message ?? judgment.explanation ?? 'Nope. That code belongs in the evidence locker.');
       }
-    } catch (error: any) {
-      const message = error?.message ?? 'Python execution failed.'; setRuntimeError(message); setTerminalOutput(''); setVerdict('failed');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Python execution failed.'; setRuntimeError(message); setTerminalOutput(''); setVerdict('failed');
       const nextFailures = failureCount + 1; setFailureCount(nextFailures); setAiState('angry');
       const learningResult = AdaptiveLearningEngine.recordAttempt({ profile: progress, challengeId: currentChallenge.id, lessonId: currentLesson.id, topicId: currentLesson.id, passed: false, hintsUsed: hintsThisAttempt, runtimeError: message, errorType: 'runtime_error', code, output: '', challengeType: currentChallenge.type, difficulty: currentChallenge.difficulty });
       updateProgress({ ...progress, ...learningResult.profile, lastActiveTimestamp: Date.now() });
@@ -216,7 +217,7 @@ export default function App() {
       const response = await AITeacherService.requestGuidance({ mode, lessonTitle: currentLesson.title, concept: currentLesson.concept, code, terminalOutput, runtimeError, expectedOutput: currentChallenge.expectedOutput, profile: progress, failureCount, hintsThisAttempt, userQuery: '' });
       setJarvisMessage(response.message ?? response.text ?? 'JARVIS has nothing useful to say. Impressive.'); setAiState(mode === 'ROAST' ? 'mocking' : 'teaching');
       if (mode === 'HINT') setHintsThisAttempt(count => count + 1);
-    } catch (error: any) { setAiState('warning'); setJarvisMessage(error?.message ?? 'Local AI is unavailable. Fallback brain engaged.'); }
+    } catch (error: any) { setAiState('warning'); setJarvisMessage(error instanceof Error ? error.message : 'Local AI is unavailable. Fallback brain engaged.'); }
   };
   const resetChallenge = () => { setCode(currentChallenge.starterCode ?? ''); setTerminalOutput(''); setRuntimeError(''); setVerdict('idle'); setFailureCount(0); setHintsThisAttempt(0); setAiState('idle'); setJarvisMessage('Fresh attempt. Same battlefield. Try not to embarrass yourself twice.'); };
   const jumpToLesson = (lessonId: string) => {
@@ -254,7 +255,7 @@ export default function App() {
       {modal === 'diagnostic' && <Diagnostic onComplete={result => { updateProgress({ ...progress, diagnosticCompleted: true, ...result }); setModal(null); }} onClose={() => setModal(null)} />}
       {modal === 'dungeon' && <DebuggingDungeon progress={progress} language={progress.learningLanguage} onSolveScenario={(scenarioId, xpEarned, hintsUsed) => { updateProgress({ ...progress, xp: progress.xp + xpEarned, totalHintsUsed: progress.totalHintsUsed + hintsUsed, lastActiveTimestamp: Date.now() }); }} onClose={() => setModal(null)} />}
       {modal === 'projects' && <ProjectFactory progress={progress} language={progress.learningLanguage} onCompleteProject={(projectId, xpEarned) => { updateProgress({ ...progress, xp: progress.xp + xpEarned, lastActiveTimestamp: Date.now() }); }} onClose={() => setModal(null)} />}
-      {modal === 'boss' && <BossFight progress={progress} language={progress.learningLanguage} onVictory={xpEarned => { updateProgress({ ...progress, xp: progress.xp + xpEarned, lastActiveTimestamp: Date.now() }); setModal(null); }} onClose={() => setModal(null)} />}
+      {modal === 'boss' && <BossFight progress={progress} language={progress.learningLanguage} onVictory={(xpEarned, bossId) => { const cleared = new Set(progress.clearedBosses ?? []); const firstClear = !cleared.has(bossId); cleared.add(bossId); updateProgress({ ...progress, xp: progress.xp + (firstClear ? xpEarned : 0), clearedBosses: [...cleared], lastActiveTimestamp: Date.now() }); setModal(null); }} onClose={() => setModal(null)} />}
       {modal === 'audio' && <AudioSettingsModal onClose={() => setModal(null)} />}
       {modal === 'tutor' && <AITutor progress={progress} language={progress.learningLanguage} intensity={progress.roastIntensity} lessonTitle={currentLesson.title} lessonConcept={currentLesson.concept} userCode={code} terminalOutput={terminalOutput} runtimeError={runtimeError} expectedOutput={currentChallenge.expectedOutput} onClose={() => setModal(null)} />}
     </div>

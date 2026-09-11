@@ -5,7 +5,7 @@ export interface AchievementProgress {
   completedLessons: string[];
   topicMastery?: Record<string, number> | Record<string, unknown>;
   behavioralPatterns?: unknown;
-  attemptHistory?: Array<{ challengeType?: string; passed?: boolean }>;
+  attemptHistory?: Array<{ challengeType?: string; passed?: boolean; hintsUsed?: number; independent?: boolean }>;
 }
 
 export interface Achievement {
@@ -23,18 +23,14 @@ export const ACHIEVEMENTS: Achievement[] = [
     title: 'FIRST BLOOD',
     description: 'Survived and cleared your first Python challenge in Hell.',
     icon: '⚔️',
-    checkUnlocked: (p) => p.completedLessons.length >= 1,
+    checkUnlocked: (p) => (p.attemptHistory ?? []).some((attempt) => attempt.passed === true),
   },
   {
     id: 'independent_demon',
     title: 'INDEPENDENT DEMON',
     description: 'Solved 3 challenges without asking the AI for a single hint.',
     icon: '🛡️',
-    checkUnlocked: (p) => {
-      if (!p.behavioralPatterns || typeof p.behavioralPatterns !== 'object') return false;
-      const count = (p.behavioralPatterns as { independentSuccessCount?: unknown }).independentSuccessCount;
-      return Number(count ?? 0) >= 3;
-    },
+    checkUnlocked: (p) => (p.attemptHistory ?? []).filter((attempt) => attempt.passed === true && (attempt.independent === true || Number(attempt.hintsUsed ?? 0) === 0)).length >= 3,
   },
   {
     id: 'streak_slayer',

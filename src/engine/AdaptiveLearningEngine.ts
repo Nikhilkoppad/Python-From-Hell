@@ -1,7 +1,7 @@
 import type { AdaptiveDecision, AttemptHistoryEntry, ChallengeType, LearningProfile, Skill } from '../types/learning';
 import { SkillMasteryEngine } from './SkillMasteryEngine';
 
-type LegacyAttemptInput = {
+type AttemptInput = {
   profile: LearningProfile;
   challengeId: string;
   lessonId: string;
@@ -17,9 +17,9 @@ type LegacyAttemptInput = {
 };
 
 export class AdaptiveLearningEngine {
-  public static recordAttempt(input: LegacyAttemptInput): { profile: LearningProfile; decision: any } {
+  public static recordAttempt(input: AttemptInput): { profile: LearningProfile; decision: AdaptiveDecision } {
     const profile = input.profile;
-    const skills: Record<string, Skill> = { ...((profile.skills ?? {}) as Record<string, Skill>) };
+    const skills: Record<string, Skill> = { ...(profile.skills ?? {}) };
     const existing = skills[input.topicId] ?? SkillMasteryEngine.createSkill(input.topicId, input.topicId, `Evidence tracked for ${input.topicId}`);
     const challengeType = input.challengeType ?? this.inferChallengeType(input.challengeId);
     const difficulty = Math.max(1, Math.min(5, Number(input.difficulty ?? 1)));
@@ -33,8 +33,8 @@ export class AdaptiveLearningEngine {
     skills[input.topicId] = updatedSkill;
 
     const now = Date.now();
-    const history = [
-      ...((profile.attemptHistory ?? []) as Array<AttemptHistoryEntry & { challengeId?: string; lessonId?: string; independent?: boolean; challengeType?: ChallengeType }>),
+    const history: AttemptHistoryEntry[] = [
+      ...(profile.attemptHistory ?? []),
       {
         challengeId: input.challengeId,
         lessonId: input.lessonId,
@@ -46,6 +46,8 @@ export class AdaptiveLearningEngine {
         timestamp: now,
         independent: input.hintsUsed === 0,
         challengeType,
+        code: input.code,
+        output: input.output,
       },
     ];
 
@@ -79,8 +81,8 @@ export class AdaptiveLearningEngine {
           ? updatedSkill.evidence.hintsUsed / updatedSkill.evidence.attempts
           : 0,
       },
-      weakTopics: Object.values(skills).filter((skill: Skill) => skill.weak).map((skill: Skill) => skill.id),
-      masteredTopics: Object.values(skills).filter((skill: Skill) => skill.masteryLevel === 'MASTERED').map((skill: Skill) => skill.id),
+      weakTopics: Object.values(skills).filter((skill) => skill.weak).map((skill) => skill.id),
+      masteredTopics: Object.values(skills).filter((skill) => skill.masteryLevel === 'MASTERED').map((skill) => skill.id),
       currentTopicId: input.topicId,
       lastActiveTimestamp: now,
       recentMistakes: input.passed
@@ -98,22 +100,18 @@ export class AdaptiveLearningEngine {
           ].slice(-20),
     };
 
-    const canonical = this.decideNextAction(
-      nextProfile,
-      updatedSkill,
-      input.passed,
-      challengeType,
-      difficulty,
-      input.hintsUsed,
-      input.errorType,
-    );
-
-    let action = canonical.action as string;
-    if (action === 'TEACH_AGAIN') action = 'MICRO_LESSON';
-    if (action === 'DEBUG_CHALLENGE') action = 'DEBUG';
-    if (action === 'INDEPENDENT_CHALLENGE') action = 'INDEPENDENT_RETRY';
-
-    const decision = { ...canonical, action, topicId: input.topicId };
+    const decision: AdaptiveDecision = {
+      ...this.decideNextAction(
+        nextProfile,
+        updatedSkill,
+        input.passed,
+        challengeType,
+        difficulty,
+        input.hintsUsed,
+        input.errorType,
+      ),
+      topicId: input.topicId,
+    };
     nextProfile.lastDecision = decision;
     return { profile: nextProfile, decision };
   }

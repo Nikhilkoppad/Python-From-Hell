@@ -22,12 +22,13 @@ function unwrapStored(value: unknown): ProgressData | null {
     return value.data;
   }
 
-  // Migrate the previous versioned envelope without changing learner data.
-  if (value.version === 1 && isRecord(value.data)) {
+  // Migrate all previous versioned envelopes without exposing the envelope
+  // itself as learner progress. Version 2 was used by the previous storage key.
+  if ((value.version === 1 || value.version === 2) && isRecord(value.data)) {
     return value.data;
   }
 
-  // Migrate the older raw-progress format.
+  // Migrate the oldest raw-progress format.
   return value;
 }
 

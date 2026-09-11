@@ -110,6 +110,15 @@ export class AdaptiveLearningEngine {
 
     const decision = { ...canonical, action, topicId: input.topicId };
     nextProfile.lastDecision = decision;
+
+    // App's transition handler advances by one index after a pass. For adaptive
+    // remediation decisions, move the source cursor back one so that transition
+    // resolves to the same challenge instead of silently advancing.
+    if (input.passed && (action === 'DEBUG' || action === 'INDEPENDENT_RETRY')) {
+      const currentIndex = Number((profile as any).currentChallengeIndex ?? 0);
+      (profile as any).currentChallengeIndex = Math.max(0, currentIndex - 1);
+    }
+
     return { profile: nextProfile, decision };
   }
 

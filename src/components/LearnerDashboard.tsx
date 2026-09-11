@@ -2,17 +2,7 @@ import React from 'react';
 import type { UserProgress, LearningLanguage } from '../types';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { AIRouter } from '../ai/AIRouter';
-import {
-  Brain,
-  Zap,
-  Target,
-  ShieldAlert,
-  Flame,
-  Activity,
-  Award,
-  ArrowRight,
-  TrendingUp,
-} from 'lucide-react';
+import { Brain, Zap, Target, ShieldAlert, Flame, Activity, Award, ArrowRight, TrendingUp } from 'lucide-react';
 
 interface LearnerDashboardProps {
   progress: UserProgress;
@@ -22,25 +12,13 @@ interface LearnerDashboardProps {
   onClose: () => void;
 }
 
-export const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
-  progress,
-  language,
-  onNavigateToLesson,
-  onOpenBoss,
-  onClose,
-}) => {
+export const LearnerDashboard: React.FC<LearnerDashboardProps> = ({ progress, language, onNavigateToLesson, onOpenBoss, onClose }) => {
   const isHindi = language === 'HINDI';
   const rec = progress.recommendations?.[0];
   const routingLogs = AIRouter.getRoutingLogs().slice(0, 5);
-
   const topicAssessments = Object.values(progress.topicStats || {});
   const assessedCount = topicAssessments.length;
-
-  // Empirical mastery average only across assessed topics
-  const avgMastery = assessedCount > 0
-    ? Math.round(topicAssessments.reduce((sum, t) => sum + (t.masteryScore || 0), 0) / assessedCount)
-    : null;
-
+  const avgMastery = assessedCount > 0 ? Math.round(topicAssessments.reduce((sum, t) => sum + (t.masteryScore || 0), 0) / assessedCount) : null;
   const indepCount = progress.behavioralPatterns?.independentSuccessCount || 0;
   const assistCount = progress.behavioralPatterns?.assistedSuccessCount || 0;
   const totalSuccesses = indepCount + assistCount;
@@ -49,254 +27,25 @@ export const LearnerDashboard: React.FC<LearnerDashboardProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 font-mono">
       <div className="max-w-5xl w-full bg-slate-950 border-2 border-red-600/70 rounded-2xl shadow-[0_0_100px_rgba(220,38,38,0.4)] flex flex-col max-h-[92vh] overflow-hidden">
-        
-        {/* HEADER */}
         <div className="p-6 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-red-600/20 border border-red-500 rounded-xl text-red-500">
-              <Brain className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-black text-white tracking-wider">LEARNER DOSSIER & EVIDENCE</h2>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-red-950 border border-red-800 text-red-400 font-bold uppercase">
-                  LEVEL {progress.level}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400">
-                {isHindi ? 'Real execution evidence par based empirical mastery metrics' : 'Empirical learning metrics derived strictly from actual execution logs'}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-800 hover:bg-slate-800 transition-all"
-          >
-            ✕ CLOSE
-          </button>
+          <div className="flex items-center gap-3"><div className="p-2.5 bg-red-600/20 border border-red-500 rounded-xl text-red-500"><Brain className="w-6 h-6" /></div><div><div className="flex items-center gap-2"><h2 className="text-lg font-black text-white tracking-wider">LEARNER DOSSIER & EVIDENCE</h2><span className="text-[10px] px-2 py-0.5 rounded bg-red-950 border border-red-800 text-red-400 font-bold uppercase">LEVEL {progress.level}</span></div><p className="text-xs text-slate-400">{isHindi ? 'Real execution evidence par based empirical mastery metrics' : 'Empirical learning metrics derived strictly from actual execution logs'}</p></div></div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-800 hover:bg-slate-800 transition-all">✕ CLOSE</button>
         </div>
-
-        {/* BODY */}
         <div className="p-6 flex-1 overflow-y-auto space-y-6">
-          
-          {/* PRIMARY HERO: WHAT SHOULD I DO NEXT? */}
-          <div className="p-5 bg-gradient-to-r from-red-950/70 via-slate-900 to-black border-2 border-red-600/60 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="text-[10px] font-black uppercase tracking-widest text-red-400 flex items-center gap-1.5">
-                <Target className="w-4 h-4 text-red-500" />
-                {isHindi ? 'AGLA KADAM KYA HONA CHAHIYE?' : 'RECOMMENDED NEXT ACTION'}
-              </div>
-              <h3 className="text-lg font-black text-white">
-                {rec?.action ? `${rec.action.replace('_', ' ')}` : 'CONTINUE TRAINING'}
-              </h3>
-              <p className="text-xs text-slate-300">
-                {rec?.reason ? `${rec.reason} — ${rec.evidence}` : (isHindi ? 'Apni Python exercises execute karo taaki real evidence create ho sake.' : 'Execute code in the arena to generate empirical assessment evidence.')}
-              </p>
-            </div>
-
-            <div className="flex gap-2 w-full sm:w-auto">
-              {rec?.action === 'TAKE_BOSS_CHALLENGE' ? (
-                <button
-                  onClick={() => { onClose(); onOpenBoss(); }}
-                  className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-red-900/40 flex items-center gap-2"
-                >
-                  <span>BOSS ARENA →</span>
-                  <Zap className="w-4 h-4" />
-                </button>
-              ) : (
-                <button
-                  onClick={() => { onClose(); onNavigateToLesson(); }}
-                  className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-red-900/40 flex items-center gap-2"
-                >
-                  <span>{isHindi ? 'ARENA ME CODE KARO →' : 'OPEN TRAINING ARENA →'}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* 4-KPI SUMMARY TILES - STRICTLY EVIDENCE-BASED */}
+          <div className="p-5 bg-gradient-to-r from-red-950/70 via-slate-900 to-black border-2 border-red-600/60 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"><div className="space-y-1"><div className="text-[10px] font-black uppercase tracking-widest text-red-400 flex items-center gap-1.5"><Target className="w-4 h-4 text-red-500" />{isHindi ? 'AGLA KADAM KYA HONA CHAHIYE?' : 'RECOMMENDED NEXT ACTION'}</div><h3 className="text-lg font-black text-white">{rec?.action ? `${rec.action.replace('_', ' ')}` : 'CONTINUE TRAINING'}</h3><p className="text-xs text-slate-300">{rec?.reason ? `${rec.reason} — ${rec.evidence}` : (isHindi ? 'Apni Python exercises execute karo taaki real evidence create ho sake.' : 'Execute code in the arena to generate empirical assessment evidence.')}</p></div><div className="flex gap-2 w-full sm:w-auto">{rec?.action === 'TAKE_BOSS_CHALLENGE' ? <button onClick={() => { onClose(); onOpenBoss(); }} className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-red-900/40 flex items-center gap-2"><span>BOSS ARENA →</span><Zap className="w-4 h-4" /></button> : <button onClick={() => { onClose(); onNavigateToLesson(); }} className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-red-900/40 flex items-center gap-2"><span>{isHindi ? 'ARENA ME CODE KARO →' : 'OPEN TRAINING ARENA →'}</span><ArrowRight className="w-4 h-4" /></button>}</div></div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-1">
-              <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1">
-                <TrendingUp className="w-3.5 h-3.5 text-red-400" /> OVERALL MASTERY
-              </div>
-              <div className="text-2xl font-black text-white">
-                {avgMastery !== null ? `${avgMastery}%` : 'Awaiting Data'}
-              </div>
-              <div className="text-[10px] text-slate-400">
-                {assessedCount > 0 ? `${assessedCount} topics assessed` : '0 topics assessed'}
-              </div>
-            </div>
-
-            <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-1">
-              <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1">
-                <Flame className="w-3.5 h-3.5 text-orange-400" /> INDEPENDENCE
-              </div>
-              <div className="text-2xl font-black text-emerald-400">
-                {indepPercent !== null ? `${indepPercent}%` : 'Awaiting Data'}
-              </div>
-              <div className="text-[10px] text-slate-400">{indepCount} solo clears</div>
-            </div>
-
-            <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-1">
-              <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1">
-                <ShieldAlert className="w-3.5 h-3.5 text-amber-400" /> AI DEPENDENCY
-              </div>
-              <div className={`text-2xl font-black ${progress.behavioralPatterns?.dependencyDetected ? 'text-red-500' : 'text-slate-300'}`}>
-                {progress.behavioralPatterns?.dependencyDetected ? 'HIGH' : 'LOW'}
-              </div>
-              <div className="text-[10px] text-slate-400">{progress.aiTutor?.totalHintsProvided || 0} hints recorded</div>
-            </div>
-
-            <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-1">
-              <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1">
-                <Zap className="w-3.5 h-3.5 text-yellow-400" /> TOTAL XP
-              </div>
-              <div className="text-2xl font-black text-yellow-400">{progress.xp}</div>
-              <div className="text-[10px] text-slate-400">{progress.streak} day streak</div>
-            </div>
+            <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-1"><div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5 text-red-400" /> OVERALL MASTERY</div><div className="text-2xl font-black text-white">{avgMastery !== null ? `${avgMastery}%` : 'Awaiting Data'}</div><div className="text-[10px] text-slate-400">{assessedCount > 0 ? `${assessedCount} topics assessed` : '0 topics assessed'}</div></div>
+            <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-1"><div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1"><Flame className="w-3.5 h-3.5 text-orange-400" /> INDEPENDENCE</div><div className="text-2xl font-black text-emerald-400">{indepPercent !== null ? `${indepPercent}%` : 'Awaiting Data'}</div><div className="text-[10px] text-slate-400">{indepCount} solo clears</div></div>
+            <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-1"><div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1"><ShieldAlert className="w-3.5 h-3.5 text-amber-400" /> AI DEPENDENCY</div><div className={`text-2xl font-black ${progress.behavioralPatterns?.dependencyDetected ? 'text-red-500' : 'text-slate-300'}`}>{progress.behavioralPatterns?.dependencyDetected ? 'HIGH' : 'LOW'}</div><div className="text-[10px] text-slate-400">{progress.aiTutor?.totalHintsProvided || 0} hints recorded</div></div>
+            <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-1"><div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1"><Zap className="w-3.5 h-3.5 text-yellow-400" /> TOTAL XP</div><div className="text-2xl font-black text-yellow-400">{progress.xp}</div><div className="text-[10px] text-slate-400">{progress.streak} day streak</div></div>
           </div>
-
-          {/* TOPIC MASTERY BREAKDOWN & MISCONCEPTIONS */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
-            {/* TOPIC MASTERY */}
-            <div className="p-5 bg-slate-900/70 border border-slate-800 rounded-xl space-y-3">
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Brain className="w-4 h-4 text-red-400" /> TOPIC ASSESSMENTS & EVIDENCE
-              </h4>
-              <div className="space-y-3">
-                {topicAssessments.length === 0 ? (
-                  <div className="text-xs text-slate-500 py-6 text-center">
-                    <p className="font-bold text-slate-400 mb-1">Status: Not Assessed</p>
-                    <p>Execute code in the arena to establish empirical assessment evidence.</p>
-                  </div>
-                ) : (
-                  topicAssessments.map((t) => (
-                    <div key={t.topicId} className="p-3 bg-black/60 border border-slate-800 rounded-xl space-y-1.5">
-                      <div className="flex justify-between items-center text-xs font-mono">
-                        <span className="text-slate-200 font-bold">{t.topicTitle}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${
-                          t.status === 'MASTERED' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' :
-                          t.status === 'STRONG' ? 'bg-blue-950 text-blue-400 border border-blue-800' :
-                          t.status === 'COMPETENT' ? 'bg-yellow-950 text-yellow-400 border border-yellow-800' :
-                          'bg-slate-800 text-slate-300'
-                        }`}>
-                          {t.status} ({t.masteryScore}%)
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-slate-400">{t.evidenceSummary}</p>
-                      <div className="h-1.5 bg-slate-900 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full ${t.status === 'MASTERED' ? 'bg-emerald-500' : t.status === 'STRONG' ? 'bg-blue-500' : 'bg-yellow-500'}`}
-                          style={{ width: `${t.masteryScore || 0}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* MISCONCEPTIONS & REPEATED FLAWS */}
-            <div className="p-5 bg-slate-900/70 border border-slate-800 rounded-xl space-y-3">
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <ShieldAlert className="w-4 h-4 text-amber-400" /> DETECTED MISCONCEPTIONS
-              </h4>
-              <div className="space-y-2">
-                {(progress.misconceptions?.tracked || []).length === 0 ? (
-                  <div className="text-xs text-slate-500 py-6 text-center">
-                    No structural misconceptions detected in recent execution traces.
-                  </div>
-                ) : (
-                  progress.misconceptions.tracked.map((m, idx) => (
-                    <div key={idx} className="p-3 bg-black border border-red-900/40 rounded-lg text-xs flex items-center justify-between">
-                      <span className="text-red-300">{m}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-red-950 text-red-400 border border-red-800 font-bold">
-                        RECORDED
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
+            <div className="p-5 bg-slate-900/70 border border-slate-800 rounded-xl space-y-3"><h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5"><Brain className="w-4 h-4 text-red-400" /> TOPIC ASSESSMENTS & EVIDENCE</h4><div className="space-y-3">{topicAssessments.length === 0 ? <div className="text-xs text-slate-500 py-6 text-center"><p className="font-bold text-slate-400 mb-1">Status: Not Assessed</p><p>Execute code in the arena to establish empirical assessment evidence.</p></div> : topicAssessments.map(t => <div key={t.topicId} className="p-3 bg-black/60 border border-slate-800 rounded-xl space-y-1.5"><div className="flex justify-between items-center text-xs font-mono"><span className="text-slate-200 font-bold">{t.topicTitle}</span><span className={`text-[10px] px-2 py-0.5 rounded font-bold ${t.status === 'MASTERED' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : t.status === 'STRONG' ? 'bg-blue-950 text-blue-400 border border-blue-800' : t.status === 'COMPETENT' ? 'bg-yellow-950 text-yellow-400 border border-yellow-800' : 'bg-slate-800 text-slate-300'}`}>{t.status} ({t.masteryScore}%)</span></div><p className="text-[10px] text-slate-400">{t.evidenceSummary}</p><div className="h-1.5 bg-slate-900 rounded-full overflow-hidden"><div className={`h-full ${t.status === 'MASTERED' ? 'bg-emerald-500' : t.status === 'STRONG' ? 'bg-blue-500' : 'bg-yellow-500'}`} style={{ width: `${t.masteryScore || 0}%` }} /></div></div>)}</div></div>
+            <div className="p-5 bg-slate-900/70 border border-slate-800 rounded-xl space-y-3"><h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5"><ShieldAlert className="w-4 h-4 text-amber-400" /> DETECTED MISCONCEPTIONS</h4><div className="space-y-2">{(progress.misconceptions?.tracked || []).length === 0 ? <div className="text-xs text-slate-500 py-6 text-center">No structural misconceptions detected in recent execution traces.</div> : progress.misconceptions.tracked.map((m: string, idx: number) => <div key={idx} className="p-3 bg-black border border-red-900/40 rounded-lg text-xs flex items-center justify-between"><span className="text-red-300">{m}</span><span className="text-[10px] px-2 py-0.5 rounded bg-red-950 text-red-400 border border-red-800 font-bold">RECORDED</span></div>)}</div></div>
           </div>
-
-          {/* ACHIEVEMENTS */}
-          <div className="p-5 bg-slate-900/70 border border-slate-800 rounded-xl space-y-3">
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-              <Award className="w-4 h-4 text-yellow-400" /> HELL ACHIEVEMENTS
-            </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {ACHIEVEMENTS.map((ach) => {
-                const isUnlocked = (progress.achievements || []).some((a) => (typeof a === 'string' ? a === ach.id : a.id === ach.id)) || ach.checkUnlocked(progress);
-                return (
-                  <div
-                    key={ach.id}
-                    className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 ${
-                      isUnlocked
-                        ? 'border-yellow-900/50 bg-yellow-950/15 text-slate-200'
-                        : 'border-slate-800/80 bg-black/40 text-slate-600 opacity-60'
-                    }`}
-                  >
-                    <span className="text-xl">{ach.icon}</span>
-                    <div>
-                      <div className="font-bold text-white text-xs">{ach.title}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5 leading-snug">{ach.description}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* OMNIROUTE AI TELEMETRY */}
-          <div className="p-5 bg-slate-900/70 border border-slate-800 rounded-xl space-y-3">
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-              <Activity className="w-4 h-4 text-emerald-400" /> OMNIROUTE AI ROUTING TELEMETRY
-            </h4>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs font-mono">
-                <thead>
-                  <tr className="border-b border-slate-800 text-slate-500 text-[10px]">
-                    <th className="pb-2">TIME</th>
-                    <th className="pb-2">SPECIALIST</th>
-                    <th className="pb-2">MODEL ROUTED</th>
-                    <th className="pb-2">LATENCY</th>
-                    <th className="pb-2">STATUS</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/50">
-                  {routingLogs.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-4 text-center text-slate-500">
-                        No external routing requests executed yet. AI Tutor is standby.
-                      </td>
-                    </tr>
-                  ) : (
-                    routingLogs.map((log) => (
-                      <tr key={log.requestId} className="text-slate-300">
-                        <td className="py-2 text-[10px] text-slate-500">{new Date(log.timestamp).toLocaleTimeString()}</td>
-                        <td className="py-2 text-red-400">{log.category}</td>
-                        <td className="py-2 text-slate-200">{log.selectedProvider}/{log.selectedModel}</td>
-                        <td className="py-2 text-slate-400">{log.latencyMs}ms</td>
-                        <td className="py-2">
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${log.success ? 'bg-emerald-950 text-emerald-400' : 'bg-red-950 text-red-400'}`}>
-                            {log.success ? 'CLEARED' : 'FALLBACK'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
+          <div className="p-5 bg-slate-900/70 border border-slate-800 rounded-xl space-y-3"><h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5"><Award className="w-4 h-4 text-yellow-400" /> HELL ACHIEVEMENTS</h4><div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{ACHIEVEMENTS.map(ach => { const isUnlocked = (progress.achievements || []).some(a => (typeof a === 'string' ? a === ach.id : a.id === ach.id)) || ach.checkUnlocked(progress); return <div key={ach.id} className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 ${isUnlocked ? 'border-yellow-900/50 bg-yellow-950/15 text-slate-200' : 'border-slate-800/80 bg-black/40 text-slate-600 opacity-60'}`}><span className="text-xl">{ach.icon}</span><div><div className="font-bold text-white text-xs">{ach.title}</div><div className="text-[10px] text-slate-400 mt-0.5 leading-snug">{ach.description}</div></div></div>; })}</div></div>
+          <div className="p-5 bg-slate-900/70 border border-slate-800 rounded-xl space-y-3"><h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5"><Activity className="w-4 h-4 text-emerald-400" /> OMNIROUTE AI ROUTING TELEMETRY</h4><div className="overflow-x-auto"><table className="w-full text-left text-xs font-mono"><thead><tr className="border-b border-slate-800 text-slate-500 text-[10px]"><th className="pb-2">TIME</th><th className="pb-2">SPECIALIST</th><th className="pb-2">MODEL ROUTED</th><th className="pb-2">LATENCY</th><th className="pb-2">STATUS</th></tr></thead><tbody className="divide-y divide-slate-800/50">{routingLogs.length === 0 ? <tr><td colSpan={5} className="py-4 text-center text-slate-500">No external routing requests executed yet. AI Tutor is standby.</td></tr> : routingLogs.map(log => <tr key={log.requestId} className="text-slate-300"><td className="py-2 text-[10px] text-slate-500">{new Date(log.timestamp).toLocaleTimeString()}</td><td className="py-2 text-red-400">{log.category}</td><td className="py-2 text-slate-200">{log.selectedProvider}/{log.selectedModel}</td><td className="py-2 text-slate-400">{log.latencyMs}ms</td><td className="py-2"><span className={`text-[10px] px-1.5 py-0.5 rounded ${log.success ? 'bg-emerald-950 text-emerald-400' : 'bg-red-950 text-red-400'}`}>{log.success ? 'CLEARED' : 'FALLBACK'}</span></td></tr>)}</tbody></table></div></div>
         </div>
-
       </div>
     </div>
   );

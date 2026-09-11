@@ -4,20 +4,19 @@ import type { UserProgress } from './types';
 import { CURRICULUM } from './data/curriculum';
 import { loadProgress, saveProgress } from './utils/progressPersistence';
 import { HellGate } from './components/Onboarding/HellGate';
+import { RoastLanguageGate, type RoastLanguage } from './components/Onboarding/RoastLanguageGate';
 import { LearningFlowController } from './components/LearningFlowController';
 import App from './App';
 
 /**
  * Product entry point.
- *
- * New learners enter through HellGate, where they choose language/intensity
- * and complete the diagnostic. Returning learners can resume their saved run.
- * Once inside the product, each new lesson is preceded by a structured
- * concept briefing and knowledge check before the coding arena is unlocked.
+ * New learners choose the language used for fictional profanity/roasts first,
+ * then enter the normal HellGate language, intensity and diagnostic flow.
  */
 export default function ProductEntryGate() {
   const [gateKey, setGateKey] = useState(0);
   const [entered, setEntered] = useState(false);
+  const [roastLanguage, setRoastLanguage] = useState<RoastLanguage | null>(null);
 
   const storedProgress = useMemo(() => loadProgress(), [gateKey]);
 
@@ -56,10 +55,12 @@ export default function ProductEntryGate() {
       diagnosticCompleted: true,
       roastIntensity: intensity,
       learningLanguage: language,
+      roastLanguage: roastLanguage ?? 'HINDI',
       lastActiveTimestamp: Date.now(),
     };
 
     saveProgress(nextProgress);
+    localStorage.setItem('python-from-hell-roast-language', roastLanguage ?? 'HINDI');
     setEntered(true);
   };
 
@@ -69,10 +70,16 @@ export default function ProductEntryGate() {
 
   const handleResetSession = () => {
     localStorage.removeItem('python-from-hell-progress');
+    localStorage.removeItem('python-from-hell-roast-language');
     sessionStorage.clear();
+    setRoastLanguage(null);
     setEntered(false);
     setGateKey((value) => value + 1);
   };
+
+  if (!roastLanguage && !savedProgress) {
+    return <RoastLanguageGate onSelect={setRoastLanguage} />;
+  }
 
   return (
     <HellGate

@@ -46,11 +46,10 @@ const DEFAULT_PROGRESS: AppProgress = {
   recentMistakes: [], currentTopicId: 'l1_1_print', lastDecision: undefined,
 };
 function phaseForChallenge(challenge: Challenge, failures: number, decision?: string): ArenaPhase {
-  if (decision === 'MICRO_LESSON') return 'TEACH';
-  if (decision === 'DEBUG') return 'DEBUG';
-  if (decision === 'INDEPENDENT_RETRY') return 'INDEPENDENT';
+  if (decision === 'TEACH_AGAIN') return 'TEACH';
+  if (decision === 'DEBUG_CHALLENGE') return 'DEBUG';
+  if (decision === 'INDEPENDENT_CHALLENGE') return 'INDEPENDENT';
   if (decision === 'BOSS_CHALLENGE') return 'MASTERY';
-  if (decision === 'ADVANCE') return 'MASTERY';
   if (failures >= 3) return 'DEBUG';
   switch (challenge.type) {
     case 'PREDICT': case 'TRACE': return 'PREDICT';
@@ -148,7 +147,7 @@ export default function App() {
   const updateProgress = useCallback((next: AppProgress) => { setProgress(next); saveProgress(next); }, []);
   const moveToNextChallenge = useCallback((profile: AppProgress, decision: any) => {
     const action = String(decision?.action ?? 'CONTINUE');
-    if (action === 'MICRO_LESSON' || action === 'DEBUG' || action === 'INDEPENDENT_RETRY') {
+    if (action === 'TEACH_AGAIN' || action === 'DEBUG_CHALLENGE' || action === 'INDEPENDENT_CHALLENGE') {
       updateProgress({ ...profile, currentChallengeIndex: progress.currentChallengeIndex, currentTopicId: currentLesson.id });
       return;
     }
@@ -198,9 +197,9 @@ export default function App() {
         const learningResult = AdaptiveLearningEngine.recordAttempt({ profile: progress, challengeId: currentChallenge.id, lessonId: currentLesson.id, topicId: currentLesson.id, passed: false, hintsUsed: hintsThisAttempt, runtimeError: error, errorType, code, output, challengeType: currentChallenge.type, difficulty: currentChallenge.difficulty });
         const nextProfile: AppProgress = { ...progress, ...learningResult.profile, lastActiveTimestamp: Date.now() }; updateProgress(nextProfile);
         const observation = JarvisProctorEngine.observe({ phase: nextFailures >= 3 ? 'DEBUG' : phase as LearningPhase, passed: false, failureCount: nextFailures, hintsThisAttempt, runtimeError: error });
-        if (learningResult.decision.action === 'MICRO_LESSON') { setShowTeaching(true); setJarvisMessage('Three failures. Stop hammering RUN like a confused monkey. We are going back to the concept.'); }
-        else if (learningResult.decision.action === 'DEBUG') setJarvisMessage('You are repeating the same mistake. Congratulations: you have discovered debugging.');
-        else if (learningResult.decision.action === 'INDEPENDENT_RETRY') setJarvisMessage('You are becoming addicted to hints. No more training wheels. Solve it yourself.');
+        if (learningResult.decision.action === 'TEACH_AGAIN') { setShowTeaching(true); setJarvisMessage('Three failures. Stop hammering RUN like a confused monkey. We are going back to the concept.'); }
+        else if (learningResult.decision.action === 'DEBUG_CHALLENGE') setJarvisMessage('You are repeating the same mistake. Congratulations: you have discovered debugging.');
+        else if (learningResult.decision.action === 'INDEPENDENT_CHALLENGE') setJarvisMessage('You are becoming addicted to hints. No more training wheels. Solve it yourself.');
         else setJarvisMessage(observation.message ?? (judgment as any)?.explanation ?? 'Nope. That code belongs in the evidence locker.');
       }
     } catch (error: any) {

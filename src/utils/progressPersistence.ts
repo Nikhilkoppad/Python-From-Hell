@@ -25,10 +25,10 @@ export function loadProgress(): ProgressData {
   }
 }
 
-export function saveProgress(progress: ProgressData): void {
+export function saveProgress(progress: unknown): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-  } catch (error) {
-    console.error("Failed to save progress:", error);
+  } catch (e) {
+    console.error('Failed to save progress', e);
   }
 }

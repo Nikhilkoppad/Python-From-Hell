@@ -154,44 +154,73 @@ export interface LearningSession {
   completed: boolean;
 }
 
-export interface LearningProfile {
-  level: number;
-
-  xp: number;
-
-  streak: number;
-
-  totalAttempts: number;
-
-  totalSuccesses: number;
-
-  totalFailures: number;
-
-  totalHints: number;
-
-  independentSuccesses: number;
-
-  skills: Record<string, Skill>;
-
-  weakSkills: string[];
-
-  masteredSkills: string[];
-
-  misconceptions: string[];
-
-  recentErrors: string[];
-
-  currentLessonId?: string;
-
-  currentChallengeId?: string;
-
-  currentSkillId?: string;
-
-  currentPhase: LearningPhase;
-
-  lastActiveAt?: number;
+export interface AttemptHistoryEntry {
+  topicId?: string;
+  skillId?: string;
+  passed: boolean;
+  hintsUsed: number;
+  errorType?: string;
+  timestamp: number;
+  timeSpentSeconds?: number;
 }
 
+export interface LearningProfile {
+  studentId: string;
+  overallMastery: number;
+  currentPhase: LearningPhase;
+  totalSuccesses: number;
+  totalFailures: number;
+  skills: Record<string, Skill>;
+  
+  // Widen misconceptions to rich shape for dashboard compatibility
+  misconceptions: {
+    tracked: string[];
+    lastDetected: string;
+    detectionCount: number;
+  };
+
+  // Optional legacy mirror fields for backwards compatibility
+  roastIntensity?: string;
+  learningLanguage?: string;
+  currentChallengeIndex?: number;
+  completedLessons?: string[];
+  diagnosticCompleted?: boolean;
+  incidents?: unknown[];
+  achievements?: unknown[];
+  interviewReadiness?: number;
+  recommendations?: unknown[];
+  routingLogs?: unknown[];
+  topicStats?: Record<string, unknown>;
+  topicMastery?: Record<string, number>;
+  topicAccuracy?: Record<string, number>;
+  topicRetention?: Record<string, number>;
+  topicIndependentSolve?: Record<string, number>;
+  hintDependency?: Record<string, number>;
+  confidenceIndicators?: Record<string, number>;
+  attemptHistory?: AttemptHistoryEntry[];
+  recentMistakes?: Array<{ challengeId: string; topicId?: string; skillId?: string; errorType?: string; error?: string; timestamp: number }>;
+  currentTopicId?: string;
+  lastActiveTimestamp?: number;
+  successfulAttempts?: number;
+  independentSolves?: number;
+  totalHintsUsed?: number;
+  masteredTopics?: string[];
+  weakTopics?: string[];
+  behavioralPatterns?: {
+    dependencyDetected?: boolean;
+    excessiveHints?: boolean;
+    repeatedMistakePatterns?: string[];
+    independentSuccessCount?: number;
+    assistedSuccessCount?: number;
+    lastIndependentAttempt?: string;
+  };
+  aiTutor?: {
+    totalSessions?: number;
+    totalHintsProvided?: number;
+    explanationsGiven?: number;
+    streakStatus?: string;
+  };
+}
 export interface AdaptiveDecision {
   action:
     | "CONTINUE"

@@ -27,7 +27,8 @@ import type { Challenge, Lesson } from './data/curriculum';
 import { PythonRuntime } from './execution/PythonRuntime';
 
 import { JudgmentEngine } from './engine/JudgmentEngine';
-import LearningEngine from './engine/LearningEngine';
+import { SkillMasteryEngine } from './engine/SkillMasteryEngine';
+import { AdaptiveLearningEngine } from './engine/AdaptiveLearningEngine';
 import { AIRouter } from './ai/AIRouter';
 import { AITeacherService } from './ai/AITeacherService';
 import { JarvisProctorEngine } from './ai/JarvisProctorEngine';
@@ -363,7 +364,7 @@ export default function App() {
           attempt.topicId === currentLesson.id
       );
 
-    return LearningEngine.evaluateTopic(
+    return SkillMasteryEngine.evaluateTopic(
       attempts as any
     );
   }, [progress.attemptHistory, currentLesson.id]);
@@ -420,8 +421,8 @@ export default function App() {
     );
   }, [
     currentLesson.id,
-    currentChallenge.id,
-    currentChallenge.starterCode,
+    currentChallenge?.id,
+    currentChallenge?.starterCode,
   ]);
 
   useEffect(() => {
@@ -633,7 +634,7 @@ export default function App() {
         setAiState('celebrating');
 
         const learningResult =
-          LearningEngine.recordAttempt({
+          AdaptiveLearningEngine.recordAttempt({
             profile: progress,
             challengeId: currentChallenge.id,
             lessonId: currentLesson.id,
@@ -714,7 +715,7 @@ export default function App() {
         );
 
         const learningResult =
-          LearningEngine.recordAttempt({
+          AdaptiveLearningEngine.recordAttempt({
             profile: progress,
             challengeId: currentChallenge.id,
             lessonId: currentLesson.id,
@@ -740,7 +741,7 @@ export default function App() {
             phase:
               nextFailures >= 3
                 ? 'DEBUG'
-                : phase as LearningPhase,
+                : (phase as LearningPhase),
             passed: false,
             failureCount: nextFailures,
             hintsThisAttempt,
@@ -793,7 +794,7 @@ export default function App() {
       setAiState('angry');
 
       const learningResult =
-        LearningEngine.recordAttempt({
+        AdaptiveLearningEngine.recordAttempt({
           profile: progress,
           challengeId: currentChallenge.id,
           lessonId: currentLesson.id,
@@ -1236,403 +1237,147 @@ export default function App() {
 
                   <div>
                     <div className="text-xs font-bold text-white">
-                      {currentChallenge.title ??
+                      {currentChallenge?.title ??
                         `Challenge ${progress.currentChallengeIndex + 1}`}
                     </div>
 
                     <div className="text-[10px] text-slate-600">
-                      {currentChallenge.type ??
+                      {currentChallenge?.type ??
                         'BUILD'}{' '}
                       · difficulty{' '}
-                      {currentChallenge.difficulty ??
-                        1}
+                      {currentChallenge?.difficulty ?? 1}
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="p-4">
-                <div className="mb-5 rounded-lg border border-slate-800 bg-[#080a0e] p-4">
-                  <div className="mb-2 text-[9px] font-bold uppercase tracking-widest text-red-400">
-                    OBJECTIVE
+                <p className="text-xs leading-6 text-slate-300">
+                  {currentChallenge?.instruction ??
+                    'Complete the assignment.'}
+                </p>
+
+                {currentChallenge?.expectedOutput && (
+                  <div className="mt-3 rounded border border-slate-800 bg-[#07090d] p-3 font-mono text-[11px]">
+                    <span className="text-slate-600">Expected Output:</span>
+                    <pre className="mt-1 text-slate-300">
+                      {currentChallenge.expectedOutput}
+                    </pre>
                   </div>
-
-                  <div className="text-sm leading-6 text-slate-300">
-                    {currentChallenge.instruction}
-                  </div>
-
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {currentChallenge.requiredCodePatterns?.map(
-                      (pattern: string) => (
-                        <span
-                          key={pattern}
-                          className="rounded border border-slate-800 bg-slate-900 px-2 py-1 font-mono text-[9px] text-slate-500"
-                        >
-                          {pattern}
-                        </span>
-                      )
-                    )}
-                  </div>
-                </div>
-
-                <div className="overflow-hidden rounded-xl border border-slate-800 bg-[#050608]">
-                  <div className="flex items-center justify-between border-b border-slate-800 bg-[#0a0c10] px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <Code2
-                        size={13}
-                        className="text-slate-500"
-                      />
-
-                      <span className="text-[10px] uppercase tracking-widest text-slate-600">
-                        solution.py
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-red-500/70" />
-                      <span className="h-2 w-2 rounded-full bg-yellow-500/50" />
-                      <span className="h-2 w-2 rounded-full bg-emerald-500/50" />
-                    </div>
-                  </div>
-
-                  <textarea
-                    aria-label="Python solution editor"
-                    value={code}
-                    onChange={(event) =>
-                      setCode(event.target.value)
-                    }
-                    spellCheck={false}
-                    className="min-h-[390px] w-full resize-y border-0 bg-[#050608] p-5 font-mono text-sm leading-7 text-slate-200 outline-none"
-                  />
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={isRunning}
-                    onClick={handleRunCode}
-                    className="flex items-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white transition hover:bg-red-500 disabled:opacity-40"
-                  >
-                    <Play size={14} />
-
-                    {isRunning
-                      ? 'Executing'
-                      : 'Execute'}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={resetChallenge}
-                    className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-400 transition hover:bg-slate-800 hover:text-white"
-                  >
-                    <RotateCcw size={13} />
-                    Reset
-                  </button>
-
-                  <div className="ml-auto flex items-center gap-3 text-[10px] uppercase tracking-widest text-slate-600">
-                    <span>
-                      FAILS:{' '}
-                      <span className="text-slate-400">
-                        {failureCount}
-                      </span>
-                    </span>
-
-                    <span>
-                      HINTS:{' '}
-                      <span className="text-slate-400">
-                        {hintsThisAttempt}
-                      </span>
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-4 overflow-hidden rounded-xl border border-slate-800 bg-[#050608]">
-                  <div className="flex items-center gap-2 border-b border-slate-800 px-3 py-2">
-                    <Terminal
-                      size={13}
-                      className="text-slate-600"
-                    />
-
-                    <span className="text-[10px] uppercase tracking-widest text-slate-600">
-                      terminal
-                    </span>
-                  </div>
-
-                  <pre
-                    aria-live="polite"
-                    className="min-h-[100px] overflow-auto whitespace-pre-wrap p-4 font-mono text-xs leading-6 text-slate-400"
-                  >
-                    {runtimeError
-                      ? runtimeError
-                      : terminalOutput ||
-                        'Waiting for execution...'}
-                  </pre>
-                </div>
+                )}
               </div>
             </section>
 
-            {verdict !== 'idle' && (
-              <section
-                className={[
-                  'mb-5 rounded-xl border p-4',
-                  verdict === 'passed'
-                    ? 'border-emerald-500/30 bg-emerald-500/5'
-                    : 'border-red-500/30 bg-red-500/5',
-                ].join(' ')}
-              >
-                <div className="flex items-start gap-3">
-                  {verdict === 'passed' ? (
-                    <CircleCheck
-                      size={20}
-                      className="mt-0.5 text-emerald-400"
-                    />
-                  ) : (
-                    <CircleX
-                      size={20}
-                      className="mt-0.5 text-red-400"
-                    />
-                  )}
-
-                  <div>
-                    <div
-                      className={[
-                        'text-xs font-black uppercase tracking-widest',
-                        verdict === 'passed'
-                          ? 'text-emerald-400'
-                          : 'text-red-400',
-                      ].join(' ')}
-                    >
-                      {verdict === 'passed'
-                        ? 'CHALLENGE CLEARED'
-                        : 'CHALLENGE FAILED'}
-                    </div>
-
-                    <div className="mt-1 text-xs leading-5 text-slate-500">
-                      {verdict === 'passed'
-                        ? 'The evidence says you actually understood something.'
-                        : 'Do not panic. The failure is evidence. Use it.'}
-                    </div>
-                  </div>
+            <section className="mb-5 rounded-xl border border-slate-800 bg-[#0b0e13] overflow-hidden">
+              <div className="flex items-center justify-between border-b border-slate-800 px-4 py-2.5 bg-[#090b10]">
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <Code2 size={14} />
+                  <span>solution.py</span>
                 </div>
-              </section>
-            )}
 
-            <div className="mb-6 grid grid-cols-2 gap-2 xl:hidden">
-              <button
-                type="button"
-                onClick={() => setModal('map')}
-                className="rounded-lg border border-slate-800 bg-slate-900 p-3 text-xs text-slate-400"
-              >
-                Hell Map
-              </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={resetChallenge}
+                    className="flex items-center gap-1.5 rounded border border-slate-800 px-2.5 py-1 text-[11px] text-slate-400 hover:bg-slate-800 hover:text-white transition"
+                  >
+                    <RotateCcw size={12} />
+                    <span>Reset</span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => setModal('dashboard')}
-                className="rounded-lg border border-slate-800 bg-slate-900 p-3 text-xs text-slate-400"
-              >
-                Player Dossier
-              </button>
-            </div>
+                  <button
+                    type="button"
+                    onClick={handleRunCode}
+                    disabled={isRunning}
+                    className="flex items-center gap-1.5 rounded bg-red-600 px-3 py-1 text-[11px] font-bold text-white hover:bg-red-500 disabled:opacity-50 transition"
+                  >
+                    <Play size={12} />
+                    <span>{isRunning ? 'RUNNING...' : 'RUN CODE'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <textarea
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                spellCheck={false}
+                className="w-full h-64 bg-[#07090d] p-4 font-mono text-xs text-slate-200 focus:outline-none resize-y"
+              />
+            </section>
+
+            <section className="rounded-xl border border-slate-800 bg-[#0b0e13] p-4 font-mono text-xs">
+              <div className="mb-2 flex items-center justify-between text-[10px] text-slate-600 uppercase tracking-widest">
+                <span>Terminal Output</span>
+                {verdict === 'passed' && (
+                  <span className="flex items-center gap-1 text-emerald-400">
+                    <CircleCheck size={12} /> PASSED
+                  </span>
+                )}
+                {verdict === 'failed' && (
+                  <span className="flex items-center gap-1 text-red-400">
+                    <CircleX size={12} /> FAILED
+                  </span>
+                )}
+              </div>
+
+              <div className="min-h-[80px] rounded bg-[#07090d] p-3 text-slate-300">
+                {runtimeError ? (
+                  <pre className="text-red-400">{runtimeError}</pre>
+                ) : terminalOutput ? (
+                  <pre>{terminalOutput}</pre>
+                ) : (
+                  <span className="text-slate-700">// Execution output will appear here</span>
+                )}
+              </div>
+            </section>
           </div>
         </main>
 
-        <aside className="border-l border-slate-800/70 bg-[#090b10]">
-          <div className="sticky top-16 p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-red-400">
-                  JARVIS
-                </div>
+        <aside className="hidden border-l border-slate-800/70 bg-[#090b10] xl:block">
+          <div className="sticky top-16 p-4 space-y-4">
+            <AICharacterBanner
+              state={aiState}
+              message={jarvisMessage}
+            />
 
-                <div className="text-[9px] uppercase tracking-widest text-slate-700">
-                  Hell Proctor
-                </div>
+            <div className="rounded-xl border border-slate-800 bg-[#0c0f14] p-3 space-y-2">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
+                AI Assistance
               </div>
 
-              <div className="flex items-center gap-2">
-                <span
-                  className={[
-                    'h-2 w-2 rounded-full',
-                    gatewayOnline
-                      ? 'bg-emerald-400'
-                      : 'bg-yellow-500',
-                  ].join(' ')}
-                />
-
-                <span className="text-[9px] uppercase tracking-widest text-slate-600">
-                  {gatewayOnline
-                    ? 'LOCAL'
-                    : 'FALLBACK'}
-                </span>
-              </div>
-            </div>
-
-            <div className="overflow-hidden rounded-xl border border-slate-800 bg-[#0b0e13]">
-              <AICharacterBanner
-                state={aiState}
-                message={jarvisMessage}
-              />
-            </div>
-
-            <div className="mt-3 grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => askJarvis('HINT')}
-                className="flex items-center justify-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:border-yellow-500/30 hover:text-yellow-300"
+                className="w-full flex items-center justify-between rounded border border-slate-800 bg-slate-900/50 p-2 text-xs text-slate-300 hover:border-slate-700 transition"
               >
-                <HelpCircle size={13} />
-                Hint
-              </button>
-
-              <button
-                type="button"
-                onClick={() => askJarvis('DEBUG')}
-                className="flex items-center justify-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:border-orange-500/30 hover:text-orange-300"
-              >
-                <Bug size={13} />
-                Debug
-              </button>
-
-              <button
-                type="button"
-                onClick={() => askJarvis('EXPLAIN')}
-                className="flex items-center justify-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:border-blue-500/30 hover:text-blue-300"
-              >
-                <Brain size={13} />
-                Explain
+                <span className="flex items-center gap-2">
+                  <HelpCircle size={14} className="text-yellow-400" />
+                  Get Hint
+                </span>
+                <span className="text-[10px] text-slate-600">({hintsThisAttempt} used)</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => askJarvis('ROAST')}
-                className="flex items-center justify-center gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-red-400 hover:bg-red-500/10"
+                className="w-full flex items-center justify-between rounded border border-slate-800 bg-slate-900/50 p-2 text-xs text-slate-300 hover:border-slate-700 transition"
               >
-                <Flame size={13} />
-                Roast
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => openTutor('CHAT')}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-800 bg-[#0b0e13] px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-white"
-            >
-              <Sparkles size={13} />
-              Open Full JARVIS
-            </button>
-
-            <div className="mt-5 rounded-xl border border-slate-800 bg-[#0b0e13] p-4">
-              <div className="mb-3 flex items-center gap-2">
-                <Activity
-                  size={14}
-                  className="text-slate-500"
-                />
-
-                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-600">
-                  Adaptive Monitor
+                <span className="flex items-center gap-2">
+                  <Flame size={14} className="text-red-400" />
+                  Roast Code
                 </span>
-              </div>
+              </button>
 
-              <div className="space-y-3">
-                <div>
-                  <div className="mb-1 flex justify-between text-[9px] uppercase tracking-widest">
-                    <span className="text-slate-600">
-                      Mastery
-                    </span>
-
-                    <span className="text-slate-400">
-                      {currentEvaluation.mastery}%
-                    </span>
-                  </div>
-
-                  <div className="h-1 overflow-hidden rounded-full bg-slate-900">
-                    <div
-                      className="h-full bg-red-500"
-                      style={{
-                        width: `${currentEvaluation.mastery}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-lg border border-slate-800 bg-[#080a0e] p-2">
-                    <div className="text-[8px] uppercase tracking-widest text-slate-700">
-                      Accuracy
-                    </div>
-
-                    <div className="mt-1 text-sm font-bold text-slate-300">
-                      {currentEvaluation.accuracy}%
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg border border-slate-800 bg-[#080a0e] p-2">
-                    <div className="text-[8px] uppercase tracking-widest text-slate-700">
-                      Independent
-                    </div>
-
-                    <div className="mt-1 text-sm font-bold text-slate-300">
-                      {currentEvaluation.independence}%
-                    </div>
-                  </div>
-                </div>
-
-                {adaptiveDecision && (
-                  <div className="border-t border-slate-800 pt-3">
-                    <div className="text-[8px] uppercase tracking-widest text-slate-700">
-                      Next move
-                    </div>
-
-                    <div className="mt-1 text-xs font-bold text-slate-300">
-                      {adaptiveDecision.action}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {currentEvaluation.weak && (
-              <div className="mt-3 flex gap-3 rounded-xl border border-orange-500/20 bg-orange-500/5 p-3">
-                <AlertTriangle
-                  size={15}
-                  className="mt-0.5 shrink-0 text-orange-400"
-                />
-
-                <div>
-                  <div className="text-[9px] font-bold uppercase tracking-widest text-orange-400">
-                    Weak Skill Detected
-                  </div>
-
-                  <div className="mt-1 text-[10px] leading-5 text-slate-600">
-                    JARVIS will increase explanation,
-                    debugging and independent practice
-                    before allowing progression.
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <div className="rounded-lg border border-slate-800 bg-[#0b0e13] p-3">
-                <div className="text-[8px] uppercase tracking-widest text-slate-700">
-                  Attempts
-                </div>
-
-                <div className="mt-1 text-sm font-bold text-slate-300">
-                  {progress.totalAttempts ?? 0}
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-slate-800 bg-[#0b0e13] p-3">
-                <div className="text-[8px] uppercase tracking-widest text-slate-700">
-                  Solves
-                </div>
-
-                <div className="mt-1 text-sm font-bold text-emerald-400">
-                  {progress.independentSolves ?? 0}
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={() => openTutor('CHAT')}
+                className="w-full flex items-center justify-between rounded border border-slate-800 bg-slate-900/50 p-2 text-xs text-slate-300 hover:border-slate-700 transition"
+              >
+                <span className="flex items-center gap-2">
+                  <Sparkles size={14} className="text-purple-400" />
+                  Open Tutor
+                </span>
+              </button>
             </div>
           </div>
         </aside>
@@ -1641,7 +1386,8 @@ export default function App() {
       {modal === 'map' && (
         <CurriculumMap
           curriculum={CURRICULUM}
-          progress={progress}
+          currentLessonId={progress.currentLessonId}
+          completedLessons={progress.completedLessons}
           onSelectLesson={jumpToLesson}
           onClose={() => setModal(null)}
         />
@@ -1663,14 +1409,12 @@ export default function App() {
 
       {modal === 'diagnostic' && (
         <Diagnostic
-          progress={progress}
-          onComplete={(result: any) => {
+          onComplete={(result) => {
             updateProgress({
               ...progress,
-              ...result,
               diagnosticCompleted: true,
+              ...result,
             });
-
             setModal(null);
           }}
           onClose={() => setModal(null)}
@@ -1694,14 +1438,6 @@ export default function App() {
       {modal === 'boss' && (
         <BossFight
           progress={progress}
-          onComplete={(result: any) => {
-            updateProgress({
-              ...progress,
-              ...result,
-            });
-
-            setModal(null);
-          }}
           onClose={() => setModal(null)}
         />
       )}

@@ -106,19 +106,9 @@ export class AdaptiveLearningEngine {
     if (action === 'TEACH_AGAIN') action = 'MICRO_LESSON';
     if (action === 'DEBUG_CHALLENGE') action = 'DEBUG';
     if (action === 'INDEPENDENT_CHALLENGE') action = 'INDEPENDENT_RETRY';
-    if (action === 'BOSS_CHALLENGE' || (input.passed && updatedSkill.masteryLevel === 'MASTERED')) action = 'ADVANCE';
 
     const decision = { ...canonical, action, topicId: input.topicId };
     nextProfile.lastDecision = decision;
-
-    // App's transition handler advances by one index after a pass. For adaptive
-    // remediation decisions, move the source cursor back one so that transition
-    // resolves to the same challenge instead of silently advancing.
-    if (input.passed && (action === 'DEBUG' || action === 'INDEPENDENT_RETRY')) {
-      const currentIndex = Number((profile as any).currentChallengeIndex ?? 0);
-      (profile as any).currentChallengeIndex = Math.max(0, currentIndex - 1);
-    }
-
     return { profile: nextProfile, decision };
   }
 

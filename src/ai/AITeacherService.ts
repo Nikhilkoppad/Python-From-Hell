@@ -3,7 +3,7 @@ import { LearnerContextManager } from './LearnerContextManager';
 
 export type AITutorMode = 'HINT' | 'DEBUG' | 'EXPLAIN' | 'ROAST' | 'CHAT';
 export interface AITutorRequest { mode: AITutorMode; lessonTitle?: string; concept?: string; code?: string; lessonConcept?: string; userCode?: string; terminalOutput?: string; runtimeError?: string | null; expectedOutput?: string; userQuery?: string; profile?: any; progress?: any; failureCount?: number; hintsThisAttempt?: number; }
-export interface AITeacherResponse { message: string; text?: string; source: 'LOCAL_OLLAMA' | 'LOCAL_FALLBACK'; mode: AITutorMode; modelUsed?: string; providerUsed?: string; latencyMs?: number; category?: string; shouldTeach?: boolean; shouldDebug?: boolean; shouldRemoveScaffolding?: boolean; }
+export interface AITeacherResponse { message: string; text?: string; source: 'LOCAL_OLLAMA' | 'LOCAL_FALLBACK'; mode?: AITutorMode; modelUsed?: string; providerUsed?: string; latencyMs?: number; category?: string; shouldTeach?: boolean; shouldDebug?: boolean; shouldRemoveScaffolding?: boolean; }
 
 export class AITeacherService {
   static async requestGuidance(request: AITutorRequest): Promise<AITeacherResponse> {

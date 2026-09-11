@@ -126,7 +126,7 @@ export class AdaptiveLearningEngine {
     const evidence = skill.evidence;
     if (!passed) {
       if (this.countRecentSameErrors(evidence.recentErrors, errorType) >= 2) {
-        return { action: 'MICRO_LESSON', reason: 'Repeated misconception detected. Reteach the concept.', skillId: skill.id, recommendedDifficulty: Math.max(1, difficulty - 1), removeHints: false };
+        return { action: 'TEACH_AGAIN', reason: 'Repeated misconception detected. Reteach the concept.', skillId: skill.id, recommendedDifficulty: Math.max(1, difficulty - 1), removeHints: false };
       }
       if (evidence.failures >= 3) {
         return { action: 'DEBUG_CHALLENGE', reason: 'Repeated failures detected. Switch to diagnosis.', skillId: skill.id, recommendedDifficulty: Math.max(1, difficulty - 1), removeHints: false };

@@ -5,11 +5,10 @@ import { RoastEngine } from './RoastEngine';
 export class JudgmentEngine {
   /**
    * Canonical execution evaluator.
-   * Output matching and required-code-pattern checks are deterministic;
-   * the AI layer is never responsible for deciding pass/fail.
+   * Deterministic facts decide pass/fail; the AI layer is never authoritative.
    */
   public static evaluateExecution(
-    _userCode: string,
+    userCode: string,
     output: string,
     expectedOutput: string,
     runtimeError: string | null,
@@ -17,27 +16,34 @@ export class JudgmentEngine {
     intensity: RoastIntensity,
     failureCount: number,
     requiredCodePatterns: Array<{ pattern: string; explanation: string }> = [],
-    language: LearningLanguage = 'ENGLISH'
+    language: LearningLanguage = 'ENGLISH',
+    challengeType?: Challenge['type']
   ): EvaluationResult {
     const cleanOutput = output.trim();
     const cleanExpected = expectedOutput.trim();
+    const normalizedCode = userCode.trim();
 
-    const missingRequirement = requiredCodePatterns.find(
-      (requirement) => {
-        try {
-          return !new RegExp(requirement.pattern).test(_userCode);
-        } catch {
-          return true;
-        }
+    const missingRequirement = requiredCodePatterns.find((requirement) => {
+      try {
+        return !new RegExp(requirement.pattern, 'm').test(userCode);
+      } catch {
+        return true;
       }
-    );
+    });
+
+    // BUILD/FIX/DEBUG tasks must demonstrate a solution, not merely print the
+    // expected answer. This blocks the simplest output-only cheating path.
+    const outputOnlyCheat = ['BUILD', 'FIX', 'DEBUG'].includes(String(challengeType))
+      && new RegExp(`^\\s*print\\s*\\(\\s*[\"']${escapeRegExp(cleanExpected)}[\"']\\s*\\)\\s*$`, 'i').test(normalizedCode);
 
     const errorType = missingRequirement
       ? 'REQUIRED_CONCEPT_MISSING'
-      : runtimeError?.includes('timed out')
-        ? 'TIMEOUT'
-        : runtimeError?.match(/(?:SyntaxError|IndentationError|NameError|UnboundLocalError|TypeError|ValueError|ZeroDivisionError)/)?.[0]
-          ?? (runtimeError ? 'RUNTIME_ERROR' : 'OUTPUT_MISMATCH');
+      : outputOnlyCheat
+        ? 'OUTPUT_ONLY_CHEAT'
+        : runtimeError?.includes('timed out')
+          ? 'TIMEOUT'
+          : runtimeError?.match(/(?:SyntaxError|IndentationError|NameError|UnboundLocalError|TypeError|ValueError|ZeroDivisionError)/)?.[0]
+            ?? (runtimeError ? 'RUNTIME_ERROR' : 'OUTPUT_MISMATCH');
 
     const generatedRoast = RoastEngine.generateRoast(
       errorType,
@@ -47,42 +53,47 @@ export class JudgmentEngine {
       language
     );
 
-    if (!runtimeError && cleanOutput === cleanExpected && !missingRequirement) {
+    if (!runtimeError && cleanOutput === cleanExpected && !missingRequirement && !outputOnlyCheat) {
       return {
         passed: true,
         userOutput: cleanOutput,
         roastMessage: generatedRoast.roast,
-        explanation: 'Your code output matches the expected target perfectly.',
+        explanation: 'Deterministic checks passed: the execution output matches the expected target and the required solution evidence is present.',
         fixHint: 'Proceed to the next task.',
         personaUsed: intensity,
       };
     }
 
+    const failureMessage = missingRequirement?.explanation
+      ?? (outputOnlyCheat ? 'Printing the expected answer is not a valid solution for this challenge. Implement or repair the requested logic.' : null)
+      ?? runtimeError
+      ?? `Expected "${cleanExpected}", got "${cleanOutput}"`;
+
     return {
       passed: false,
       userOutput: cleanOutput,
       errorType,
-      errorMessage: missingRequirement?.explanation || runtimeError || `Expected "${cleanExpected}", got "${cleanOutput}"`,
+      errorMessage: failureMessage,
       roastMessage: generatedRoast.roast,
       explanation: missingRequirement
         ? `The output is not enough for this challenge: ${missingRequirement.explanation}`
-        : runtimeError
-          ? `${errorType}: Python could not complete this attempt in ${lessonTitle}. Read the traceback from top to bottom; the last line usually names the actual problem.`
-          : `Attempt #${failureCount + 1} ran successfully, but its output did not match the target.`,
+        : outputOnlyCheat
+          ? 'The answer was reproduced directly instead of demonstrating the requested coding skill.'
+          : runtimeError
+            ? `${errorType}: Python could not complete this attempt in ${lessonTitle}. Read the traceback from top to bottom; the last line usually names the actual problem.`
+            : `Attempt #${failureCount + 1} ran successfully, but its output did not match the target.`,
       fixHint: missingRequirement
         ? missingRequirement.explanation
-        : runtimeError
-          ? generatedRoast.fix ?? 'Compare each output line, including spelling, spaces, and capitalization.'
-          : 'Compare each output line, including spelling, spaces, and capitalization.',
+        : outputOnlyCheat
+          ? 'Use the starter code and implement the requested behavior instead of hard-coding the expected output.'
+          : runtimeError
+            ? generatedRoast.fix ?? 'Compare each output line, including spelling, spaces, and capitalization.'
+            : 'Compare each output line, including spelling, spaces, and capitalization.',
       personaUsed: intensity,
     };
   }
 
-  /**
-   * Backwards-compatible adapter for the legacy App call site.
-   * It delegates immediately to the canonical evaluator instead of
-   * maintaining a second judging implementation.
-   */
+  /** Backwards-compatible adapter for the legacy App call site. */
   public static evaluate(
     challenge: Challenge,
     userCode: string,
@@ -98,7 +109,12 @@ export class JudgmentEngine {
       'APOCALYPSE',
       0,
       challenge.requiredCodePatterns ?? [],
-      'HINDI'
+      'HINDI',
+      challenge.type
     );
   }
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

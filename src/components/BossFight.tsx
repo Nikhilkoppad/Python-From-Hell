@@ -9,7 +9,7 @@ import type { LearningProfile } from '../types/learning';
 interface BossFightProps {
   progress: UserProgress;
   language: LearningLanguage | string;
-  onVictory: (nextProgress: UserProgress, xpEarned: number) => void;
+  onVictory: (xpEarned: number) => void;
   onClose: () => void;
 }
 
@@ -96,9 +96,8 @@ export const BossFight: React.FC<BossFightProps> = ({ progress, language, onVict
         setCombatLog(prev => [...logs, isHindi ? '💀 CRITICAL STRIKE! Cerberus dhool chaat gaya!' : '💀 CRITICAL HIT! Cerberus has been obliterated!', ...prev]);
         setBattleState('VICTORY');
 
-        const baseProfile = progress as unknown as LearningProfile;
         const learningResult = AdaptiveLearningEngine.recordAttempt({
-          profile: baseProfile,
+          profile: progress as unknown as LearningProfile,
           challengeId: boss.id,
           lessonId: progress.currentLessonId,
           topicId: progress.currentTopicId || progress.currentLessonId,
@@ -106,6 +105,8 @@ export const BossFight: React.FC<BossFightProps> = ({ progress, language, onVict
           hintsUsed: 0,
           code,
           output: finalOutput,
+          runtimeError: finalError || undefined,
+          errorType: undefined,
           challengeType: 'BOSS',
           difficulty: 5,
         });
@@ -113,11 +114,14 @@ export const BossFight: React.FC<BossFightProps> = ({ progress, language, onVict
         const nextProgress = {
           ...progress,
           ...learningResult.profile,
-          achievements: achievementResult.unlockedIds ?? progress.achievements ?? [],
-          xp: Number(progress.xp ?? 0) + 150,
+          achievements: achievementResult.unlockedIds,
           lastActiveTimestamp: Date.now(),
         } as UserProgress;
-        onVictory(nextProgress, 150);
+
+        // App's existing callback owns the XP award. Mutate the same progress object
+        // so its spread-based state update preserves the newly recorded boss evidence.
+        Object.assign(progress, nextProgress);
+        onVictory(150);
       } else {
         setBossHp(prev => Math.max(20, prev - 35));
         setCombatLog(prev => [...logs, isHindi ? '⚠️ Boss ne attack block kiya! Logic theek kar!' : '⚠️ Boss parried your flawed logic! Refine your solution.', ...prev]);

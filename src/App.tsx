@@ -49,6 +49,7 @@ function phaseForChallenge(challenge: Challenge, failures: number, decision?: st
   if (decision === 'MICRO_LESSON') return 'TEACH';
   if (decision === 'DEBUG') return 'DEBUG';
   if (decision === 'INDEPENDENT_RETRY') return 'INDEPENDENT';
+  if (decision === 'BOSS_CHALLENGE') return 'MASTERY';
   if (decision === 'ADVANCE') return 'MASTERY';
   if (failures >= 3) return 'DEBUG';
   switch (challenge.type) {
@@ -86,6 +87,15 @@ function getCurrentHints(progress: AppProgress, challengeId: string): number {
   return attempts.filter((attempt: any) => attempt.challengeId === challengeId).slice(-1).reduce(
     (sum: number, attempt: any) => sum + Number(attempt.hintsUsed ?? 0), 0
   );
+}
+function selectAdaptiveIndex(lesson: Lesson, currentIndex: number, action: string, recommendedDifficulty: number): number {
+  if (action !== 'HARDER_CHALLENGE' && action !== 'EASIER_CHALLENGE') return currentIndex + 1;
+  const target = Math.max(1, Math.min(5, Number(recommendedDifficulty)));
+  const candidates = lesson.challenges.map((challenge, index) => ({ challenge, index })).filter(({ index }) => index > currentIndex);
+  const filtered = action === 'HARDER_CHALLENGE'
+    ? candidates.filter(({ challenge }) => Number(challenge.difficulty ?? 1) >= target)
+    : candidates.filter(({ challenge }) => Number(challenge.difficulty ?? 1) <= target);
+  return (filtered[0] ?? candidates[0])?.index ?? currentIndex + 1;
 }
 export default function App() {
   const [progress, setProgress] = useState<AppProgress>(() => {
@@ -136,8 +146,18 @@ export default function App() {
   }, []);
   useEffect(() => () => { pythonRuntime.dispose(); }, []);
   const updateProgress = useCallback((next: AppProgress) => { setProgress(next); saveProgress(next); }, []);
-  const moveToNextChallenge = useCallback((profile: AppProgress) => {
-    const nextIndex = progress.currentChallengeIndex + 1;
+  const moveToNextChallenge = useCallback((profile: AppProgress, decision: any) => {
+    const action = String(decision?.action ?? 'CONTINUE');
+    if (action === 'MICRO_LESSON' || action === 'DEBUG' || action === 'INDEPENDENT_RETRY') {
+      updateProgress({ ...profile, currentChallengeIndex: progress.currentChallengeIndex, currentTopicId: currentLesson.id });
+      return;
+    }
+    if (action === 'BOSS_CHALLENGE') {
+      updateProgress({ ...profile, currentChallengeIndex: progress.currentChallengeIndex, currentTopicId: currentLesson.id });
+      setModal('boss');
+      return;
+    }
+    const nextIndex = selectAdaptiveIndex(currentLesson, progress.currentChallengeIndex, action, Number(decision?.recommendedDifficulty ?? currentChallenge.difficulty ?? 1));
     if (nextIndex < currentLesson.challenges.length) { updateProgress({ ...profile, currentChallengeIndex: nextIndex, currentTopicId: currentLesson.id }); return; }
     const currentLevelIndex = CURRICULUM.findIndex(level => level.lessons.some(lesson => lesson.id === currentLesson.id));
     const currentLevel = CURRICULUM[currentLevelIndex];
@@ -147,7 +167,7 @@ export default function App() {
     const nextLevel = CURRICULUM[currentLevelIndex + 1];
     if (nextLevel?.lessons?.[0]) { updateProgress({ ...profile, level: Math.max(profile.level, currentLevelIndex + 2), currentLessonId: nextLevel.lessons[0].id, currentChallengeIndex: 0, currentTopicId: nextLevel.lessons[0].id, completedLessons: Array.from(new Set([...(profile.completedLessons ?? []), currentLesson.id])) }); return; }
     updateProgress({ ...profile, completedLessons: Array.from(new Set([...(profile.completedLessons ?? []), currentLesson.id])) });
-  }, [currentLesson, progress.currentChallengeIndex, updateProgress]);
+  }, [currentChallenge.difficulty, currentLesson, progress.currentChallengeIndex, updateProgress]);
   const handleRunCode = async () => {
     if (isRunning || !currentChallenge) return;
     setIsRunning(true); setVerdict('idle'); setTerminalOutput(''); setRuntimeError(''); setAiState('thinking');
@@ -163,18 +183,19 @@ export default function App() {
       setVerdict(passed ? 'passed' : 'failed');
       if (passed) {
         setAiState('celebrating');
-        const learningResult = AdaptiveLearningEngine.recordAttempt({ profile: progress, challengeId: currentChallenge.id, lessonId: currentLesson.id, topicId: currentLesson.id, passed: true, hintsUsed: hintsThisAttempt, code, output, runtimeError: undefined, errorType: undefined });
+        const learningResult = AdaptiveLearningEngine.recordAttempt({ profile: progress, challengeId: currentChallenge.id, lessonId: currentLesson.id, topicId: currentLesson.id, passed: true, hintsUsed: hintsThisAttempt, code, output, runtimeError: undefined, errorType: undefined, challengeType: currentChallenge.type, difficulty: currentChallenge.difficulty });
         const achievementResult = AchievementSystem.evaluateAchievements(learningResult.profile);
         const completedAchievements = achievementResult.unlockedIds;
         const nextProfile: AppProgress = { ...progress, ...learningResult.profile, achievements: completedAchievements ?? progress.achievements ?? [], lastActiveTimestamp: Date.now() };
         updateProgress(nextProfile);
         const observation = JarvisProctorEngine.observe({ phase: phase as LearningPhase, passed: true, failureCount, hintsThisAttempt, runtimeError: '' });
         setJarvisMessage(observation.message ?? 'Against all available evidence, you actually did it.');
-        if (learningResult.decision.action === 'ADVANCE') setJarvisMessage('Fine. You have earned the right to face something harder.');
-        window.setTimeout(() => { if (!isTransitioning) { setIsTransitioning(true); window.setTimeout(() => { moveToNextChallenge(nextProfile); setIsTransitioning(false); }, 500); } }, 900);
+        if (learningResult.decision.action === 'BOSS_CHALLENGE') setJarvisMessage('Evidence accepted. The boss has noticed you.');
+        else if (learningResult.decision.action === 'HARDER_CHALLENGE') setJarvisMessage('You are getting dangerous. Difficulty increased.');
+        window.setTimeout(() => { if (!isTransitioning) { setIsTransitioning(true); window.setTimeout(() => { moveToNextChallenge(nextProfile, learningResult.decision); setIsTransitioning(false); }, 500); } }, 900);
       } else {
         const nextFailures = failureCount + 1; setFailureCount(nextFailures); setAiState(nextFailures >= 3 ? 'angry' : 'mocking');
-        const learningResult = AdaptiveLearningEngine.recordAttempt({ profile: progress, challengeId: currentChallenge.id, lessonId: currentLesson.id, topicId: currentLesson.id, passed: false, hintsUsed: hintsThisAttempt, runtimeError: error, errorType, code, output });
+        const learningResult = AdaptiveLearningEngine.recordAttempt({ profile: progress, challengeId: currentChallenge.id, lessonId: currentLesson.id, topicId: currentLesson.id, passed: false, hintsUsed: hintsThisAttempt, runtimeError: error, errorType, code, output, challengeType: currentChallenge.type, difficulty: currentChallenge.difficulty });
         const nextProfile: AppProgress = { ...progress, ...learningResult.profile, lastActiveTimestamp: Date.now() }; updateProgress(nextProfile);
         const observation = JarvisProctorEngine.observe({ phase: nextFailures >= 3 ? 'DEBUG' : phase as LearningPhase, passed: false, failureCount: nextFailures, hintsThisAttempt, runtimeError: error });
         if (learningResult.decision.action === 'MICRO_LESSON') { setShowTeaching(true); setJarvisMessage('Three failures. Stop hammering RUN like a confused monkey. We are going back to the concept.'); }
@@ -185,7 +206,7 @@ export default function App() {
     } catch (error: any) {
       const message = error?.message ?? 'Python execution failed.'; setRuntimeError(message); setTerminalOutput(''); setVerdict('failed');
       const nextFailures = failureCount + 1; setFailureCount(nextFailures); setAiState('angry');
-      const learningResult = AdaptiveLearningEngine.recordAttempt({ profile: progress, challengeId: currentChallenge.id, lessonId: currentLesson.id, topicId: currentLesson.id, passed: false, hintsUsed: hintsThisAttempt, runtimeError: message, errorType: 'runtime_error', code, output: '' });
+      const learningResult = AdaptiveLearningEngine.recordAttempt({ profile: progress, challengeId: currentChallenge.id, lessonId: currentLesson.id, topicId: currentLesson.id, passed: false, hintsUsed: hintsThisAttempt, runtimeError: message, errorType: 'runtime_error', code, output: '', challengeType: currentChallenge.type, difficulty: currentChallenge.difficulty });
       updateProgress({ ...progress, ...learningResult.profile, lastActiveTimestamp: Date.now() });
       setJarvisMessage(nextFailures >= 3 ? 'The interpreter has joined me in judging you. DEBUG MODE.' : `Runtime failure: ${message}`);
     } finally { setIsRunning(false); }
@@ -234,7 +255,7 @@ export default function App() {
       {modal === 'diagnostic' && <Diagnostic onComplete={result => { updateProgress({ ...progress, diagnosticCompleted: true, ...result }); setModal(null); }} onClose={() => setModal(null)} />}
       {modal === 'dungeon' && <DebuggingDungeon progress={progress} language={progress.learningLanguage} onSolveScenario={(scenarioId, xpEarned, hintsUsed) => { updateProgress({ ...progress, xp: progress.xp + xpEarned, totalHintsUsed: progress.totalHintsUsed + hintsUsed, lastActiveTimestamp: Date.now() }); }} onClose={() => setModal(null)} />}
       {modal === 'projects' && <ProjectFactory progress={progress} language={progress.learningLanguage} onCompleteProject={(projectId, xpEarned) => { updateProgress({ ...progress, xp: progress.xp + xpEarned, lastActiveTimestamp: Date.now() }); }} onClose={() => setModal(null)} />}
-      {modal === 'boss' && <BossFight progress={progress} language={progress.learningLanguage} onVictory={xpEarned => { updateProgress({ ...progress, xp: progress.xp + xpEarned, lastActiveTimestamp: Date.now() }); }} onClose={() => setModal(null)} />}
+      {modal === 'boss' && <BossFight progress={progress} language={progress.learningLanguage} onVictory={xpEarned => { updateProgress({ ...progress, xp: progress.xp + xpEarned, lastActiveTimestamp: Date.now() }); setModal(null); }} onClose={() => setModal(null)} />}
       {modal === 'audio' && <AudioSettingsModal onClose={() => setModal(null)} />}
       {modal === 'tutor' && <AITutor progress={progress} language={progress.learningLanguage} intensity={progress.roastIntensity} lessonTitle={currentLesson.title} lessonConcept={currentLesson.concept} userCode={code} terminalOutput={terminalOutput} runtimeError={runtimeError} expectedOutput={currentChallenge.expectedOutput} onClose={() => setModal(null)} />}
     </div>

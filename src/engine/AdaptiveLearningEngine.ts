@@ -32,6 +32,7 @@ export class AdaptiveLearningEngine {
     });
     skills[input.topicId] = updatedSkill;
 
+    const now = Date.now();
     const history = [
       ...((profile.attemptHistory ?? []) as Array<AttemptHistoryEntry & { challengeId?: string; lessonId?: string; independent?: boolean; challengeType?: ChallengeType }>),
       {
@@ -42,13 +43,14 @@ export class AdaptiveLearningEngine {
         passed: input.passed,
         hintsUsed: input.hintsUsed,
         errorType: input.errorType,
-        timestamp: Date.now(),
+        timestamp: now,
         independent: input.hintsUsed === 0,
         challengeType,
       },
     ];
 
     const successes = history.filter((attempt) => attempt.passed).length;
+    const nextStreak = this.calculateStreak(Number(profile.streak ?? 1), profile.lastActiveTimestamp, now);
     const nextProfile: LearningProfile = {
       ...profile,
       skills,
@@ -60,6 +62,7 @@ export class AdaptiveLearningEngine {
       independentSolves: history.filter((attempt) => attempt.passed && attempt.independent).length,
       totalHintsUsed: history.reduce((sum, attempt) => sum + Number(attempt.hintsUsed ?? 0), 0),
       xp: Number(profile.xp ?? 0) + (input.passed ? 10 + difficulty * 5 : 0),
+      streak: nextStreak,
       overallMastery: this.calculateOverallMastery(skills),
       currentPhase: input.passed ? 'PRACTICE' : 'DEBUG',
       topicMastery: { ...(profile.topicMastery ?? {}), [input.topicId]: updatedSkill.mastery },
@@ -78,6 +81,7 @@ export class AdaptiveLearningEngine {
       weakTopics: Object.values(skills).filter((skill: Skill) => skill.weak).map((skill: Skill) => skill.id),
       masteredTopics: Object.values(skills).filter((skill: Skill) => skill.masteryLevel === 'MASTERED').map((skill: Skill) => skill.id),
       currentTopicId: input.topicId,
+      lastActiveTimestamp: now,
       recentMistakes: input.passed
         ? (profile.recentMistakes ?? [])
         : [
@@ -88,7 +92,7 @@ export class AdaptiveLearningEngine {
               skillId: input.topicId,
               errorType: input.errorType,
               error: input.runtimeError,
-              timestamp: Date.now(),
+              timestamp: now,
             },
           ].slice(-20),
     };
@@ -184,6 +188,21 @@ export class AdaptiveLearningEngine {
     if (id.includes('refactor')) return 'REFACTOR';
     if (id.includes('boss')) return 'BOSS';
     return 'BUILD';
+  }
+
+  private static calculateStreak(currentStreak: number, lastActiveTimestamp: unknown, now: number): number {
+    const last = typeof lastActiveTimestamp === 'string' || typeof lastActiveTimestamp === 'number'
+      ? new Date(lastActiveTimestamp).getTime()
+      : NaN;
+    if (!Number.isFinite(last)) return Math.max(1, currentStreak);
+    const lastDay = new Date(last);
+    const currentDay = new Date(now);
+    lastDay.setHours(0, 0, 0, 0);
+    currentDay.setHours(0, 0, 0, 0);
+    const dayGap = Math.round((currentDay.getTime() - lastDay.getTime()) / 86_400_000);
+    if (dayGap === 0) return Math.max(1, currentStreak);
+    if (dayGap === 1) return Math.max(1, currentStreak + 1);
+    return 1;
   }
 
   private static calculateOverallMastery(skills: Record<string, Skill>): number {

@@ -12,52 +12,19 @@ export interface DiagnosticEvidence { questionId: string; topic: string; selecte
 export interface BehavioralPatterns { independentSuccessCount: number; assistedSuccessCount: number; averageHintsPerSuccess: number; repeatedErrorTypes: string[]; preferredChallengeTypes: ChallengeType[]; [key: string]: unknown; }
 export interface AITutorState { totalSessions?: number; totalHintsProvided?: number; learningStyleProfile?: 'VISUAL' | 'HANDS_ON' | 'THEORETICAL' | 'MIXED'; commonErrorPatterns?: string[]; streakStatus?: 'ACTIVE' | 'BREAK' | 'RENEWED'; lastInteractionAt?: string | number; proficiencyScore?: number; recommendedIntensity?: string; lastMode?: 'HINT' | 'DEBUG' | 'EXPLAIN' | 'ROAST' | 'CHAT'; hintsGiven?: number; sessions?: number; [key: string]: unknown; }
 export interface LearningProfile {
-  studentId?: string;
-  overallMastery?: number;
-  currentPhase?: LearningPhase;
-  totalSuccesses?: number;
-  totalFailures?: number;
-  skills?: Record<string, Skill>;
-  misconceptions: string[];
-  behavioralPatterns?: BehavioralPatterns;
-  attemptHistory?: AttemptHistoryEntry[];
+  studentId?: string; overallMastery?: number; currentPhase?: LearningPhase; totalSuccesses?: number; totalFailures?: number;
+  skills?: Record<string, Skill>; misconceptions: unknown; behavioralPatterns?: unknown[]; attemptHistory?: AttemptHistoryEntry[];
   recentMistakes?: Array<{ challengeId: string; topicId?: string; skillId?: string; errorType?: string; error?: string; timestamp: number }>;
-  recentErrors?: string[];
-  weakTopics: string[];
-  masteredTopics: string[];
-  weakSkills?: string[];
-  topicMastery: Record<string, number>;
-  topicAccuracy?: Record<string, number>;
-  topicRetention?: Record<string, number>;
-  topicIndependentSolve?: Record<string, number>;
-  hintDependency?: Record<string, number>;
-  confidenceIndicators?: Record<string, number>;
-  xp: number;
-  level: number;
-  streak: number;
-  currentSkill?: string;
-  assistedSolves?: number;
-  totalAttempts?: number;
-  successfulAttempts?: number;
-  independentSolves?: number;
-  totalHintsUsed?: number;
-  currentTopicId?: string;
-  currentChallengeIndex: number;
-  currentLessonId: string;
-  completedLessons: string[];
-  roastIntensity: string;
-  learningLanguage: string;
-  diagnosticCompleted: boolean;
-  incidents: import('../types').IncidentLog[];
-  achievements: string[];
-  interviewReadiness?: number;
-  recommendations?: import('../types').Recommendation[];
-  routingLogs?: import('../types').AIRoutingRecord[];
-  topicStats?: Record<string, import('../types').TopicAssessment>;
-  aiTutor?: AITutorState;
-  lastActiveTimestamp?: number | string;
-  lastDecision?: AdaptiveDecision;
-  diagnosticEvidence?: DiagnosticEvidence[];
+  recentErrors?: string[]; weakTopics: string[]; masteredTopics: string[]; weakSkills?: string[];
+  topicMastery: Record<string, number>; topicAccuracy?: Record<string, number>; topicRetention?: Record<string, number>;
+  topicIndependentSolve?: Record<string, number>; hintDependency?: Record<string, number>; confidenceIndicators?: Record<string, number>;
+  xp: number; level: number; streak: number; currentSkill?: string; assistedSolves?: number; totalAttempts?: number;
+  successfulAttempts?: number; independentSolves?: number; totalHintsUsed: number; currentTopicId?: string;
+  currentChallengeIndex: number; currentLessonId: string; completedLessons: string[]; roastIntensity: string; learningLanguage: string;
+  diagnosticCompleted: boolean; incidents: import('../types').IncidentLog[]; achievements: string[]; interviewReadiness?: number;
+  recommendations?: import('../types').Recommendation[]; routingLogs?: import('../types').AIRoutingRecord[];
+  topicStats?: Record<string, import('../types').TopicAssessment>; aiTutor?: AITutorState; lastActiveTimestamp?: number | string;
+  lastDecision?: AdaptiveDecision; diagnosticEvidence?: DiagnosticEvidence[];
 }
 export interface AdaptiveDecision { action: 'CONTINUE' | 'TEACH_AGAIN' | 'MICRO_LESSON' | 'EASIER_CHALLENGE' | 'HARDER_CHALLENGE' | 'DEBUG_CHALLENGE' | 'INDEPENDENT_CHALLENGE' | 'BOSS_CHALLENGE'; reason: string; skillId: string; topicId?: string; phase?: LearningPhase; confidence?: number; recommendedDifficulty: number; removeHints: boolean; }
 export type IncidentLog = import('../types').IncidentLog;

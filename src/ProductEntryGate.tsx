@@ -4,15 +4,16 @@ import type { UserProgress } from './types';
 import { CURRICULUM } from './data/curriculum';
 import { loadProgress, saveProgress } from './utils/progressPersistence';
 import { HellGate } from './components/Onboarding/HellGate';
+import { LearningFlowController } from './components/LearningFlowController';
 import App from './App';
 
 /**
  * Product entry point.
  *
- * The learning arena is intentionally not the first screen for a new/returning
- * learner. HellGate owns the entrance decision; App owns the actual arena.
- * This keeps onboarding out of the already-large App component while making
- * the product flow explicit.
+ * New learners enter through HellGate, where they choose language/intensity
+ * and complete the diagnostic. Returning learners can resume their saved run.
+ * Once inside the product, each new lesson is preceded by a structured
+ * concept briefing and knowledge check before the coding arena is unlocked.
  */
 export default function ProductEntryGate() {
   const [gateKey, setGateKey] = useState(0);
@@ -21,7 +22,11 @@ export default function ProductEntryGate() {
   const storedProgress = useMemo(() => loadProgress(), [gateKey]);
 
   if (entered) {
-    return <App />;
+    return (
+      <LearningFlowController>
+        <App />
+      </LearningFlowController>
+    );
   }
 
   const savedProgress =
@@ -38,7 +43,9 @@ export default function ProductEntryGate() {
       0,
       Math.min(startingLevel - 1, CURRICULUM.length - 1)
     );
-    const startingLesson = CURRICULUM[levelIndex]?.lessons[0] ?? CURRICULUM[0].lessons[0];
+    const startingLesson =
+      CURRICULUM[levelIndex]?.lessons[0] ??
+      CURRICULUM[0].lessons[0];
 
     const nextProgress = {
       ...storedProgress,
@@ -62,6 +69,7 @@ export default function ProductEntryGate() {
 
   const handleResetSession = () => {
     localStorage.removeItem('python-from-hell-progress');
+    sessionStorage.clear();
     setEntered(false);
     setGateKey((value) => value + 1);
   };

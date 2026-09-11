@@ -115,18 +115,32 @@ Next recommended task: Refresh the running app and verify the welcome gate, Cont
 
 ## 2026-09-06 — Sequential Major Enhancements (AI_Prompt3.md)
 
-- VERIFIED: Read and followed `AI_Prompt3.md` sequentially in exact specified order:
-1. **Interactive Python Debugger Mode (Debugging Dungeon):**
-   - Implemented `src/data/debuggingScenarios.ts` covering subtle logic bugs (Mutable Default Argument State, Range Index Boundary Off-By-One, Scope Shadowing UnboundLocalError, Implicit Type Coercion Catastrophe) with deterministic public and hidden test suites.
-   - Implemented `src/components/DebuggingDungeon.tsx` with inspection pane, hypothesis prediction input, real Pyodide verification against public + hidden test suites, and progressive AI debugging coach clues (Level 1–3).
-2. **Project Director & Milestone Evaluator (Project Factory):**
-   - Implemented `src/data/projectsData.ts` with multi-file architectures (`models.py`, `ledger.py`, `main.py`) and milestone verification test suites.
-   - Implemented `src/components/ProjectFactory.tsx` featuring a tabbed multi-file editor, dynamic module bundler for Pyodide execution, progressive milestone verification, and AI Director architecture reviews.
-3. **Audio / Voice Multimodal Reactions:**
-   - Implemented `src/audio/AudioEngine.ts` utilizing browser Web Audio API oscillator synthesis for terminal chimes, error buzzers, and victory fanfares, alongside Web Speech API for Hindi/English voice callouts.
-   - Implemented `src/components/AudioSettingsModal.tsx` providing user controls for sound FX, voice callouts, volume adjustment, and language preferences.
-- INTEGRATED APPLICATION (`src/App.tsx`):
-  - Added DUNGEON, PROJECTS, and AUDIO controls to navigation.
-  - Connected event-driven audio triggers to challenge clears, execution errors, boss victories, and milestone approvals.
+- VERIFIED: Read and followed `AI_Prompt3.md` sequentially in exact specified order.
+- IMPLEMENTED Interactive Python Debugger Mode (Debugging Dungeon) with subtle logic bugs, deterministic public/hidden tests, real Pyodide verification, and progressive AI debugging clues.
+- IMPLEMENTED Project Director & Milestone Evaluator (Project Factory) with multi-file architectures, Pyodide module bundling, milestone verification, and AI Director reviews.
+- IMPLEMENTED Audio / Voice Multimodal Reactions using browser Web Audio API and Web Speech API, plus user controls.
+- INTEGRATED APPLICATION: Added DUNGEON, PROJECTS, and AUDIO controls to navigation and connected event-driven audio triggers to challenge clears, execution errors, boss victories, and milestone approvals.
 - VERIFIED: `cmd /c npm run build` (`tsc -b && vite build`) passed with zero errors.
 - VERIFIED: `cmd /c npm run lint` (`oxlint`) passed with zero errors.
+
+## 2026-09-11 — Product-flow rebuild (current)
+
+- CREATED a real application entry boundary: `src/ProductEntryGate.tsx` now sits between `main.tsx` and the legacy arena, so the app no longer drops straight into a coding screen.
+- WIRED the entry sequence through HellGate for new and returning learners.
+- ADDED `src/components/LearningFlowController.tsx` to enforce the first part of the learning loop for every selected lesson: **BRUTAL INTRO → SIMPLE EXPLANATION → EXAMPLES → TERMINOLOGY → KNOWLEDGE CHECK → ARENA UNLOCK**.
+- The knowledge check requires the correct answer before the coding arena unlocks and explains incorrect/correct choices.
+- The flow is lesson-driven from `CURRICULUM`; it is not hardcoded to Print Ritual.
+- FIXED the controller to use the actual curriculum shape instead of a nonexistent `findLesson` export and imported `ReactNode` as a type.
+- EXPANDED `src/data/diagnosticQuestions.ts` from 3 narrow questions to 6 questions spanning strings, variables, functions, loops, conditionals, and lists. Diagnostic placement levels are now constrained to the real two-level curriculum rather than claiming a nonexistent Level 3.
+- ADDED `.github/workflows/ci.yml` to run `npm ci`, `npm run lint`, and `npm run build` on pushes/PRs to `main`.
+- VERIFIED FROM REPOSITORY STATE: the progress storage key is `python-from-hell-progress`, matching the reset path in `ProductEntryGate.tsx`.
+- NOT YET VERIFIED: GitHub Actions has not reported a workflow run yet; browser behavior is still not directly testable from this environment.
+
+### Remaining product-critical work
+
+1. Make diagnostic placement genuinely adaptive/early-stopping rather than a fixed sequential questionnaire.
+2. Add a guided-practice stage between knowledge checks and the full coding challenge where appropriate.
+3. Make AI teaching contextual and central to the learning loop rather than only an auxiliary tutor.
+4. Surface mastery, weak concepts, recent mistakes, and the recommended next action prominently after judgment.
+5. Add deterministic hidden-test/assertion validation for challenges.
+6. Browser-test the complete onboarding → lesson → Pyodide → judgment → progression loop.

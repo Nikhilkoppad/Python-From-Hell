@@ -3,7 +3,7 @@
 export type TutorMode = 'HINT' | 'DEBUG' | 'EXPLAIN' | 'ROAST' | 'CHAT';
 
 export class LearnerContextManager {
-  static buildSystemPrompt(progress: LearningProfile | any): string {
+  static buildSystemPrompt(progress: LearningProfile): string {
     const skills: Skill[] = Array.isArray(progress?.skills)
       ? progress.skills
       : Object.values(progress?.skills ?? {}) as Skill[];

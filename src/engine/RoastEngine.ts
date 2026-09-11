@@ -15,9 +15,9 @@ type RoastBucket = 'HINDI' | 'ENGLISH' | 'MIXED';
 /**
  * Fictional game-character roast generator.
  *
- * The bank is intentionally much larger than a handful of repeated catchphrases.
- * We keep profanity inside the fictional roast persona and never use protected-
- * class slurs. Language selection is controlled by the learner's roastLanguage.
+ * The bank is intentionally large and varied. It uses profanity, slang,
+ * developer humor and memes, while excluding protected-class slurs.
+ * The learner's roastLanguage controls the vocabulary pool.
  */
 const HINDI_ROASTS = [
   'BC, ye code dekh ke interpreter bhi soch raha hai ki resignation daal doon.',
@@ -75,6 +75,49 @@ const HINDI_ROASTS = [
   'BC, list aur string ko same samajhne ki bakchodi band kar.',
   'MC, `=` assignment hai, `==` comparison. Ye basic hai, jaan le.',
   'Chutiya mistake, lekin fixable. Ab ego side mein aur code saamne.',
+  'Bhosdike, tera traceback kisi horror movie ka trailer nahi, debugging clue hai.',
+  'Bhonsdike, function ko argument de warna woh tera future predict nahi karega.',
+  'Bhosdiwale logic ko test case ne do second mein expose kar diya.',
+  'Bhosadpappu code: naam cute, output ghatiya.',
+  'Bhosadike, `None` ko number samajhne ki bakchodi mat kar.',
+  'Chutiyapa level: variable initialize hi nahi kiya aur result maang raha hai.',
+  'Chutiyagiri ka world record bana raha hai kya? Same bug teesri baar.',
+  'Chaman chutiya moment: typo ne poora program hostage bana liya.',
+  'Chodam-patti band kar. One assumption at a time test kar.',
+  'Lund se logic mat naap. Test se naap.',
+  'Lunddu-level confidence, zero evidence. Ab actual output dekh.',
+  'Lavdu, `return` bhool ke function se result expect kar raha hai.',
+  'Lulloo code: dekhne mein chalak, execute hote hi dhadaam.',
+  'Tatti-level output hai. Requirement dobara padh.',
+  'Tatti karne se easier hai traceback padhna, kar le.',
+  'Gand mein dimaag mat dhoondh. Code ke flow mein dhoondh.',
+  'Pichhwada-level debugging nahi chalegi. Root cause pakad.',
+  'Kutta, billi, ullu sab traceback padh sakte hain. Tu bhi padh le.',
+  'Saaley, variable shadow karke phir scope ko gaali de raha hai.',
+  'Saalon ki programming ka dard ek missing colon mein daal diya.',
+  'Harami shortcut ne tujhe judge ke saamne pakad liya.',
+  'Kaminepan ki limit hai. Expected behavior implement kar.',
+  'Maa kasam, ye loop termination dekh ke debugger bhi thak gaya.',
+  'Abe chutiye, ek hi bug fix kar. Poora universe rewrite mat kar.',
+  'Abe laude, error line se pehle wali line bhi check kar.',
+  'Abe bhosdike, input validate karna koi optional decoration nahi.',
+  'BC, test pass hona luck nahi, evidence hai. Fail hona bhi evidence hai.',
+  'MC, code ko ghuma-phira ke clever mat bana. Pehle correct bana.',
+  'Gandu, edge case ne tera confidence seedha null kar diya.',
+  'BSDK, empty list ko index karne gaya aur surprise mil gaya.',
+  'Chutiye, `len()` ko magic wand mat samajh.',
+  'Harami recursion ko base case de, warna ye infinite family drama chalega.',
+  'Ullu ke pathe, mutable state ko track kar. Bug hawa mein se nahi aaya.',
+  'Kamine, print statements ka jungle bana diya. Ab debugger ki tarah soch.',
+  'Bakchod, code review mein excuses nahi, reproducible evidence chahiye.',
+  'Bhosdike, typo fix karne ko architecture rewrite kar diya.',
+  'Gand ke kede, requirement ke words ko ignore karke apni kahani mat likh.',
+  'Beti chode, exact output mein ek space bhi matter kar sakta hai.',
+  'Gand mara, ab solution ko simplify kar. Overengineering ka janaza nikaal.',
+  'BC, finally pass! Aaj interpreter ne tujhe maaf kar diya.',
+  'MC, holy shit, ye baar sahi kar diya. Screenshot le, historic moment hai.',
+  'BSDK, victory mil gayi. Ab overconfidence mein next bug mat bana.',
+  'Gandu, code pass hua. Ab samjha bhi ki kyun pass hua?',
 ];
 
 const ENGLISH_ROASTS = [
@@ -121,6 +164,42 @@ const ENGLISH_ROASTS = [
   'Holy shit, you actually fixed it. I take back approximately twelve insults.',
   'Against all odds, the code passed. The universe is healing.',
   'You finally stopped fucking around and wrote the correct solution.',
+  'What the fuck is this variable naming? `x`, `y`, `z` are not a personality.',
+  'You absolute bastard, the test case was right there.',
+  'This function has more exits than a shopping mall.',
+  'Your recursion has no base case and apparently no fear of death.',
+  'You turned a simple boolean into a philosophical crisis.',
+  'That list index error came with a fucking invitation. You still missed it.',
+  'Your exception handler is basically a rug hiding a corpse.',
+  'Stop adding print statements and start forming a hypothesis.',
+  'You are not debugging; you are conducting random experiments with production code.',
+  'That variable got shadowed so hard it needs witness protection.',
+  'The code is syntactically legal and morally bankrupt.',
+  'You made an empty list and then acted surprised it was empty. Incredible.',
+  'Your type error has a better understanding of the program than you do.',
+  'That missing return statement just robbed your entire function.',
+  'You overengineered a fucking `if` statement.',
+  'The requirement said “do X” and you built a fucking theme park.',
+  'You solved the wrong problem with extraordinary confidence.',
+  'This bug has tenure now. It has survived too many attempts.',
+  'You found the edge case by walking directly into it face-first.',
+  'Your code has big “works on my machine” energy.',
+  'The judge does not care about your feelings, only the output.',
+  'Stop negotiating with the failing test. Read it.',
+  'Your loop needs a condition, not a fucking miracle.',
+  'This is the kind of code that makes future-you file a restraining order.',
+  'You did not break Python. You broke your own assumption.',
+  'That shortcut was so obvious the evaluator caught it before I did.',
+  'Congratulations: you have successfully made a one-line bug into a twelve-line bug.',
+  'You absolute goblin, clean up the state before you chase another symptom.',
+  'The stack trace is not a novel. Start at the useful line.',
+  'Your function arguments are not optional just because you wish they were.',
+  'You forgot the base case. The recursion is now legally immortal.',
+  'This output is bullshit with punctuation.',
+  'You have achieved maximum confidence with minimum evidence.',
+  'That typo just cost you ten minutes. Proofreading is cheaper.',
+  'Holy fucking shit, it passed. Do not touch anything for five seconds.',
+  'You actually solved it. I am contractually obligated to shut up for a moment.',
 ];
 
 const MIXED_ROASTS = [
@@ -153,6 +232,41 @@ const MIXED_ROASTS = [
   'Bakchod code finally passed. Screenshot le le, historic event hai.',
   'Holy BC, you actually fucking did it.',
   'Gandu, the code works now. Miracles are apparently real.',
+  'Bhosdike, scope ne phir teri le li. Variable ko sahi jagah define kar.',
+  'Bhosdiwale logic ko test case ne do second mein expose kar diya.',
+  'Bhosadpappu code: naam cute, output ghatiya.',
+  'Chutiyapa level: variable initialize hi nahi kiya aur result maang raha hai.',
+  'Chutiyagiri ka world record bana raha hai kya? Same bug teesri baar.',
+  'Chaman chutiya moment: typo ne poora program hostage bana liya.',
+  'Chodam-patti band kar. One assumption at a time test kar.',
+  'Lund se logic mat naap. Test se naap.',
+  'Lavdu, `return` bhool ke function se result expect kar raha hai.',
+  'Lulloo code: dekhne mein smart, execute hote hi dhadaam.',
+  'Tatti-level output hai. Requirement dobara padh.',
+  'Gand mein dimaag mat dhoondh. Code ke flow mein dhoondh.',
+  'Pichhwada-level debugging nahi chalegi. Root cause pakad.',
+  'Saaley, variable shadow karke phir scope ko gaali de raha hai.',
+  'Harami shortcut ne tujhe judge ke saamne pakad liya.',
+  'Kaminepan ki limit hai. Expected behavior implement kar.',
+  'Abe chutiye, ek hi bug fix kar. Poora universe rewrite mat kar.',
+  'Abe laude, error line se pehle wali line bhi check kar.',
+  'Abe bhosdike, input validate karna optional decoration nahi hai.',
+  'BC, edge case ne tera confidence seedha null kar diya.',
+  'MC, code ko clever mat bana. Pehle fucking correct bana.',
+  'Gandu, empty list ko index kiya aur phir surprise ho gaya. Wah.',
+  'BSDK, recursion ko base case de warna ye family drama kabhi khatam nahi hoga.',
+  'Chutiye, print statements ka jungle bana diya. Hypothesis bhi bana le.',
+  'Ullu ke pathe, `None` ko integer samajh ke kya achievement unlock karega?',
+  'Kamine, test fail hua hai. Debate nahi, diagnosis chahiye.',
+  'Bakchod, requirement kuch aur thi aur tune side quest bana diya.',
+  'Bhosdike, typo fix karne ko architecture rewrite kar diya.',
+  'Gand ke kede, exact output mein ek space bhi matter kar sakta hai.',
+  'Beti chode, shortcut ne evaluator ko impress nahi kiya.',
+  'Gand mara, ab solution simplify kar. Overengineering ka janaza nikaal.',
+  'BC, finally pass! Aaj interpreter ne tujhe maaf kar diya.',
+  'MC, holy shit, ye baar sahi kar diya. Historic moment hai.',
+  'BSDK, victory mil gayi. Ab overconfidence mein next bug mat bana.',
+  'Gandu, code pass hua. Ab samjha bhi ki kyun pass hua?',
 ];
 
 const FIXES: Record<string, string> = {
@@ -181,10 +295,37 @@ function poolFor(bucket: RoastBucket): string[] {
   return ENGLISH_ROASTS;
 }
 
-function pick(pool: string[], seed: string): string {
+function readRecent(bucket: RoastBucket): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(`python-from-hell-roast-history-${bucket}`);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string').slice(-12) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeRecent(bucket: RoastBucket, recent: string[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(`python-from-hell-roast-history-${bucket}`, JSON.stringify(recent.slice(-12)));
+  } catch {
+    // Roast history is optional; never let storage failure break learning.
+  }
+}
+
+function pick(pool: string[], seed: string, bucket: RoastBucket): string {
+  if (pool.length === 0) return 'Your code failed. Fix it.';
+
   let hash = 0;
   for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) | 0;
-  return pool[Math.abs(hash) % pool.length] ?? pool[0];
+  const recent = readRecent(bucket);
+  const available = pool.filter((line) => !recent.includes(line));
+  const candidates = available.length > 0 ? available : pool;
+  const roast = candidates[Math.abs(hash) % candidates.length] ?? candidates[0];
+  writeRecent(bucket, [...recent.filter((line) => line !== roast), roast]);
+  return roast;
 }
 
 export class RoastEngine {
@@ -197,10 +338,11 @@ export class RoastEngine {
     roastLanguage?: string
   ): RoastResult {
     const selectedLanguage = roastLanguage ?? language;
-    const pool = poolFor(bucketFor(selectedLanguage));
+    const bucket = bucketFor(selectedLanguage);
+    const pool = poolFor(bucket);
     const intensityText = String(intensity ?? '').toUpperCase();
-    const seed = [errorType, runtimeError, context.attemptCount, context.hintsUsed, Date.now() >> 10, intensityText].join('|');
-    const roast = pick(pool, seed);
+    const seed = [errorType, runtimeError, context.attemptCount, context.hintsUsed, Date.now(), intensityText, Math.random()].join('|');
+    const roast = pick(pool, seed, bucket);
     const specificFix = FIXES[errorType] ?? FIXES[errorType.replace(/^.*?:\s*/, '')];
 
     return {

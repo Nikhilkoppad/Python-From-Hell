@@ -17,7 +17,7 @@ type LegacyAttemptInput = {
 };
 
 export class AdaptiveLearningEngine {
-  public static recordAttempt(input: LegacyAttemptInput): { profile: LearningProfile; decision: any } {
+  public static recordAttempt(input: LegacyAttemptInput): { profile: LearningProfile; decision: AdaptiveDecision & { topicId: string } } {
     const profile = input.profile;
     const skills: Record<string, Skill> = { ...((profile.skills ?? {}) as Record<string, Skill>) };
     const existing = skills[input.topicId] ?? SkillMasteryEngine.createSkill(input.topicId, input.topicId, `Evidence tracked for ${input.topicId}`);
@@ -98,22 +98,18 @@ export class AdaptiveLearningEngine {
           ].slice(-20),
     };
 
-    const canonical = this.decideNextAction(
-      nextProfile,
-      updatedSkill,
-      input.passed,
-      challengeType,
-      difficulty,
-      input.hintsUsed,
-      input.errorType,
-    );
-
-    let action = canonical.action as string;
-    if (action === 'TEACH_AGAIN') action = 'MICRO_LESSON';
-    if (action === 'DEBUG_CHALLENGE') action = 'DEBUG';
-    if (action === 'INDEPENDENT_CHALLENGE') action = 'INDEPENDENT_RETRY';
-
-    const decision = { ...canonical, action, topicId: input.topicId };
+    const decision = {
+      ...this.decideNextAction(
+        nextProfile,
+        updatedSkill,
+        input.passed,
+        challengeType,
+        difficulty,
+        input.hintsUsed,
+        input.errorType,
+      ),
+      topicId: input.topicId,
+    };
     nextProfile.lastDecision = decision;
     return { profile: nextProfile, decision };
   }

@@ -11,9 +11,9 @@ export interface AttemptHistoryEntry { topicId?: string; skillId?: string; passe
 export interface LearningProfile {
   studentId?: any; overallMastery?: any; currentPhase?: any; totalSuccesses?: any; totalFailures?: any;
   skills?: any; misconceptions: any; behavioralPatterns?: any; attemptHistory?: AttemptHistoryEntry[]; recentMistakes?: any[]; recentErrors?: string[];
-  weakTopics?: string[]; masteredTopics?: string[]; weakSkills?: string[];
+  weakTopics?: string[]; masteredTopics: string[]; weakSkills?: string[];
   topicMastery?: any; topicAccuracy?: any; topicRetention?: any; topicIndependentSolve?: any; hintDependency?: any; confidenceIndicators?: any;
-  xp?: any; level?: any; streak?: any; currentSkill?: any; assistedSolves?: any; totalAttempts?: any; successfulAttempts?: any; independentSolves?: any; totalHintsUsed?: any;
+  xp: any; level?: any; streak?: any; currentSkill?: any; assistedSolves?: any; totalAttempts?: any; successfulAttempts?: any; independentSolves?: any; totalHintsUsed?: any;
   currentTopicId?: string; currentChallengeIndex?: number; currentLessonId?: string; completedLessons?: string[]; roastIntensity?: any; learningLanguage?: any; diagnosticCompleted?: boolean;
   incidents?: unknown[]; achievements?: unknown[]; interviewReadiness?: number; recommendations?: unknown[]; routingLogs?: unknown[]; topicStats?: any; aiTutor?: any;
   lastActiveTimestamp?: any; lastDecision?: any;

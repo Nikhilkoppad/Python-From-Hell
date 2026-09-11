@@ -13,7 +13,7 @@ export interface BehavioralPatterns { independentSuccessCount: number; assistedS
 export interface AITutorState { totalSessions?: number; totalHintsProvided?: number; learningStyleProfile?: 'VISUAL' | 'HANDS_ON' | 'THEORETICAL' | 'MIXED'; commonErrorPatterns?: string[]; streakStatus?: 'ACTIVE' | 'BREAK' | 'RENEWED'; lastInteractionAt?: string | number; proficiencyScore?: number; recommendedIntensity?: string; lastMode?: 'HINT' | 'DEBUG' | 'EXPLAIN' | 'ROAST' | 'CHAT'; hintsGiven?: number; sessions?: number; [key: string]: unknown; }
 export interface LearningProfile {
   studentId?: string; overallMastery?: number; currentPhase?: LearningPhase; totalSuccesses?: number; totalFailures?: number;
-  skills?: Record<string, Skill>; misconceptions: unknown; behavioralPatterns?: unknown[]; attemptHistory?: AttemptHistoryEntry[];
+  skills?: Record<string, Skill>; misconceptions: unknown[]; behavioralPatterns?: unknown[]; attemptHistory?: AttemptHistoryEntry[];
   recentMistakes?: Array<{ challengeId: string; topicId?: string; skillId?: string; errorType?: string; error?: string; timestamp: number }>;
   recentErrors?: string[]; weakTopics: string[]; masteredTopics: string[]; weakSkills?: string[];
   topicMastery: Record<string, number>; topicAccuracy?: Record<string, number>; topicRetention?: Record<string, number>;

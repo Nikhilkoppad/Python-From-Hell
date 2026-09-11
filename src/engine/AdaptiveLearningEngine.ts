@@ -59,6 +59,7 @@ export class AdaptiveLearningEngine {
       successfulAttempts: successes,
       independentSolves: history.filter((attempt) => attempt.passed && attempt.independent).length,
       totalHintsUsed: history.reduce((sum, attempt) => sum + Number(attempt.hintsUsed ?? 0), 0),
+      xp: Number(profile.xp ?? 0) + (input.passed ? 10 + difficulty * 5 : 0),
       overallMastery: this.calculateOverallMastery(skills),
       currentPhase: input.passed ? 'PRACTICE' : 'DEBUG',
       topicMastery: { ...(profile.topicMastery ?? {}), [input.topicId]: updatedSkill.mastery },

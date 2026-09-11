@@ -1,101 +1,16 @@
 import type { AIState, ChallengeType, LearningPhase, LearningProfile, LearningSession, Skill } from '../types/learning';
-
-export interface ProctorObservation {
-  phase: LearningPhase;
-  challengeType?: ChallengeType;
-  passed?: boolean;
-  errorType?: string;
-  runtimeError?: string;
-  hintsUsedThisAttempt: number;
-  attemptNumber: number;
-  failuresThisAttempt: number;
-  independent: boolean;
-  skill: Skill;
-  profile: LearningProfile;
-}
-
-type LegacyObservation = {
-  phase: LearningPhase;
-  passed?: boolean;
-  failureCount?: number;
-  hintsThisAttempt?: number;
-  runtimeError?: string;
-};
-
-export interface ProctorResponse {
-  state: AIState;
-  message: string;
-  shouldTeach: boolean;
-  shouldRoast: boolean;
-  shouldOfferHint: boolean;
-  shouldForceDebugging: boolean;
-  shouldRemoveScaffolding: boolean;
-  shouldCelebrate: boolean;
-}
-
+export interface ProctorObservation { phase: LearningPhase; challengeType?: ChallengeType; passed?: boolean; errorType?: string; runtimeError?: string; hintsUsedThisAttempt: number; attemptNumber: number; failuresThisAttempt: number; independent: boolean; skill: Skill; profile: LearningProfile; }
+type LegacyObservation = { phase: LearningPhase; passed?: boolean; failureCount?: number; hintsThisAttempt?: number; runtimeError?: string; };
+export interface ProctorResponse { state: AIState; message: string; shouldTeach: boolean; shouldRoast: boolean; shouldOfferHint: boolean; shouldForceDebugging: boolean; shouldRemoveScaffolding: boolean; shouldCelebrate: boolean; }
 export class JarvisProctorEngine {
-  public static createSession(
-    lessonId = '',
-    skillId = '',
-    phase: LearningPhase = 'TEACH',
-    challengeId?: string
-  ): LearningSession {
-    return {
-      sessionId: this.createSessionId(),
-      startedAt: Date.now(),
-      lessonId,
-      skillId,
-      phase,
-      challengeId,
-      attemptNumber: 0,
-      hintsThisAttempt: 0,
-      failuresThisAttempt: 0,
-      previousErrors: [],
-      startedWithoutHint: true,
-      completed: false,
-    };
-  }
-
-  public static startAttempt(session: LearningSession): LearningSession {
-    return { ...session, attemptNumber: session.attemptNumber + 1, hintsThisAttempt: 0, failuresThisAttempt: 0, startedWithoutHint: true };
-  }
-
-  public static registerHint(session: LearningSession): LearningSession {
-    return { ...session, hintsThisAttempt: session.hintsThisAttempt + 1, startedWithoutHint: false };
-  }
-
-  public static registerFailure(session: LearningSession, errorType?: string): LearningSession {
-    return { ...session, failuresThisAttempt: session.failuresThisAttempt + 1, previousErrors: errorType ? [...session.previousErrors, errorType].slice(-10) : session.previousErrors };
-  }
-
-  public static completeSession(session: LearningSession): LearningSession {
-    return { ...session, phase: 'COMPLETE', completed: true };
-  }
-
-  /** Accepts both the current evidence-rich shape and the legacy App shape. */
+  public static createSession(lessonId = '', skillId = '', phase: LearningPhase = 'TEACH', challengeId?: string): LearningSession { return { sessionId: this.createSessionId(), startedAt: Date.now(), lessonId, skillId, phase, challengeId, attemptNumber: 0, hintsThisAttempt: 0, failuresThisAttempt: 0, previousErrors: [], startedWithoutHint: true, completed: false }; }
+  public static startAttempt(session: LearningSession): LearningSession { return { ...session, attemptNumber: session.attemptNumber + 1, hintsThisAttempt: 0, failuresThisAttempt: 0, startedWithoutHint: true }; }
+  public static registerHint(session: LearningSession): LearningSession { return { ...session, hintsThisAttempt: session.hintsThisAttempt + 1, startedWithoutHint: false }; }
+  public static registerFailure(session: LearningSession, errorType?: string): LearningSession { return { ...session, failuresThisAttempt: session.failuresThisAttempt + 1, previousErrors: errorType ? [...session.previousErrors, errorType].slice(-10) : session.previousErrors }; }
+  public static completeSession(session: LearningSession): LearningSession { return { ...session, phase: 'COMPLETE', completed: true }; }
   public static observe(observation: ProctorObservation | LegacyObservation): ProctorResponse {
-    const normalized: ProctorObservation = 'hintsUsedThisAttempt' in observation
-      ? observation
-      : {
-          phase: observation.phase,
-          passed: observation.passed,
-          runtimeError: observation.runtimeError,
-          hintsUsedThisAttempt: observation.hintsThisAttempt ?? 0,
-          attemptNumber: 1,
-          failuresThisAttempt: observation.failureCount ?? 0,
-          independent: (observation.hintsThisAttempt ?? 0) === 0,
-          skill: {
-            id: 'legacy', name: 'Current challenge', description: '', prerequisites: [], mastery: 0, masteryLevel: 'BEGINNER',
-            evidence: { attempts: 0, successes: 0, failures: 0, independentSuccesses: 0, assistedSuccesses: 0, hintsUsed: 0, predictSuccesses: 0, debugSuccesses: 0, buildSuccesses: 0, explainSuccesses: 0, recentErrors: [] }, weak: false, unlocked: true,
-          },
-          profile: {
-            studentId: 'legacy', overallMastery: 0, currentPhase: observation.phase, totalSuccesses: 0, totalFailures: 0, skills: {},
-            misconceptions: { tracked: [], lastDetected: '', detectionCount: 0 },
-          },
-        };
-
+    const normalized: ProctorObservation = 'hintsUsedThisAttempt' in observation ? observation : { phase: observation.phase, passed: observation.passed, runtimeError: observation.runtimeError, hintsUsedThisAttempt: observation.hintsThisAttempt ?? 0, attemptNumber: 1, failuresThisAttempt: observation.failureCount ?? 0, independent: (observation.hintsThisAttempt ?? 0) === 0, skill: { id: 'legacy', name: 'Current challenge', description: '', prerequisites: [], mastery: 0, masteryLevel: 'BEGINNER', evidence: { attempts: 0, successes: 0, failures: 0, independentSuccesses: 0, assistedSuccesses: 0, hintsUsed: 0, predictSuccesses: 0, debugSuccesses: 0, buildSuccesses: 0, explainSuccesses: 0, recentErrors: [] }, weak: false, unlocked: true }, profile: { studentId: 'legacy', overallMastery: 0, currentPhase: observation.phase, totalSuccesses: 0, totalFailures: 0, skills: {}, weakTopics: [], masteredTopics: [], misconceptions: { tracked: [], lastDetected: '', detectionCount: 0 }, xp: 0 } };
     const { passed, errorType, runtimeError, hintsUsedThisAttempt, failuresThisAttempt, independent, skill } = normalized;
-
     if (normalized.phase === 'MASTERY') return this.response('boss_mode', 'Enough training. No hints. Show me whether you actually learned this shit.', true, true, false, true, false, false);
     if (passed && independent && hintsUsedThisAttempt === 0) return this.response('celebrating', 'Well fucking done. You solved it without me dragging your brain across the finish line.', false, false, false, false, skill.mastery >= 70, true);
     if (passed && hintsUsedThisAttempt > 0) return this.response('warning', "You passed. Cute. But you needed help, so I'm not calling this mastery yet.", false, true, false, false, false, false);
@@ -104,10 +19,6 @@ export class JarvisProctorEngine {
     if (!passed) return this.response('mocking', 'Interesting approach. Unfortunately Python has rejected your application for employment.', true, true, true, false, false, false);
     return this.response('idle', "I'm watching. Write the code. Then we'll see what your brain actually understood.", false, false, true, false, false, false);
   }
-
-  private static response(state: AIState, message: string, shouldTeach: boolean, shouldRoast: boolean, shouldOfferHint: boolean, shouldForceDebugging: boolean, shouldRemoveScaffolding: boolean, shouldCelebrate: boolean): ProctorResponse {
-    return { state, message, shouldTeach, shouldRoast, shouldOfferHint, shouldForceDebugging, shouldRemoveScaffolding, shouldCelebrate };
-  }
-
+  private static response(state: AIState, message: string, shouldTeach: boolean, shouldRoast: boolean, shouldOfferHint: boolean, shouldForceDebugging: boolean, shouldRemoveScaffolding: boolean, shouldCelebrate: boolean): ProctorResponse { return { state, message, shouldTeach, shouldRoast, shouldOfferHint, shouldForceDebugging, shouldRemoveScaffolding, shouldCelebrate }; }
   private static createSessionId(): string { return `hell-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`; }
 }

@@ -5,7 +5,6 @@ import { OllamaClient } from './OllamaClient';
 export interface RouteAIRequest {
   systemPrompt: string;
   userPrompt?: string;
-  /** Legacy alias retained for the tutor while callers migrate to userPrompt. */
   userMessage?: string;
   categoryHint?: SpecialistCategory;
   temperature?: number;
@@ -53,9 +52,12 @@ export class AIRouter {
     try {
       const health = await this.client.checkHealth();
       if (!health.online) throw new Error('Ollama is offline');
-      const response = await this.client.chat({ systemPrompt: request.systemPrompt, userPrompt, temperature: request.temperature, maxTokens: request.maxTokens });
-      const content = response.content?.trim() ?? '';
-      const result: RouteAIResponse = { content, category, modelUsed: this.client.getModel(), providerUsed: 'ollama', fallbackChain, latencyMs: Date.now() - start, success: Boolean(content) };
+      const response = await this.client.createChatCompletion([
+        { role: 'system', content: request.systemPrompt },
+        { role: 'user', content: userPrompt },
+      ], request.temperature ?? 0.6, request.maxTokens ?? 512);
+      const content = response.response.message.content.trim();
+      const result: RouteAIResponse = { content, category, modelUsed: this.client.getModel(), providerUsed: 'ollama', fallbackChain, latencyMs: response.latencyMs || Date.now() - start, success: Boolean(content) };
       this.routingLogs.push({ requestId: `route-${Date.now()}`, timestamp: new Date().toISOString(), category, selectedProvider: 'ollama', selectedModel: this.client.getModel(), fallbackChain, latencyMs: result.latencyMs, success: result.success });
       return result;
     } catch (error) {

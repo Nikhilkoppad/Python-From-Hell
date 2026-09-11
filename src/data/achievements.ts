@@ -1,4 +1,11 @@
-﻿import type { UserProgress } from '../types';
+export interface AchievementProgress {
+  xp: number;
+  streak: number;
+  level: number;
+  completedLessons: string[];
+  topicMastery?: Record<string, number> | Record<string, unknown>;
+  behavioralPatterns?: unknown;
+}
 
 export interface Achievement {
   id: string;
@@ -6,7 +13,7 @@ export interface Achievement {
   description: string;
   icon: string;
   unlockedAt?: string;
-  checkUnlocked: (progress: UserProgress) => boolean;
+  checkUnlocked: (progress: AchievementProgress) => boolean;
 }
 
 export const ACHIEVEMENTS: Achievement[] = [
@@ -22,7 +29,11 @@ export const ACHIEVEMENTS: Achievement[] = [
     title: 'INDEPENDENT DEMON',
     description: 'Solved 3 challenges without asking the AI for a single hint.',
     icon: '🛡️',
-    checkUnlocked: (p) => (p.behavioralPatterns?.independentSuccessCount ?? 0) >= 3,
+    checkUnlocked: (p) => {
+      if (!p.behavioralPatterns || typeof p.behavioralPatterns !== 'object') return false;
+      const count = (p.behavioralPatterns as { independentSuccessCount?: unknown }).independentSuccessCount;
+      return Number(count ?? 0) >= 3;
+    },
   },
   {
     id: 'streak_slayer',
@@ -36,7 +47,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     title: 'SYNTAX EXORCIST',
     description: 'Achieved 80%+ mastery on Python Fundamentals.',
     icon: '⚡',
-    checkUnlocked: (p) => Object.values(p.topicMastery || {}).some((score) => score >= 80),
+    checkUnlocked: (p) =>
+      Object.values(p.topicMastery ?? {}).some((score) => Number(score) >= 80),
   },
   {
     id: 'xp_hoarder',
@@ -50,19 +62,32 @@ export const ACHIEVEMENTS: Achievement[] = [
     title: 'DEMON SLAYER',
     description: 'Defeated a high-stakes Level Boss in the Boss Arena.',
     icon: '👑',
-    checkUnlocked: (p) => (p.level ?? 1) >= 2 || (p.completedLessons.length >= 5),
+    checkUnlocked: (p) => p.level >= 2 || p.completedLessons.length >= 5,
   },
 ];
 
 export class AchievementSystem {
-  public static evaluateAchievements(progress: UserProgress): { updated: boolean; unlockedIds: string[] } {
-    const currentUnlocked = new Set((progress.achievements || []).map((a: any) => (typeof a === 'string' ? a : a.id)));
+  public static evaluateAchievements(
+    progress: AchievementProgress & { achievements?: unknown[] }
+  ): { updated: boolean; unlockedIds: string[] } {
+    const currentUnlocked = new Set(
+      (progress.achievements ?? [])
+        .map((achievement) =>
+          typeof achievement === 'string'
+            ? achievement
+            : achievement && typeof achievement === 'object' && 'id' in achievement
+              ? String((achievement as { id?: unknown }).id ?? '')
+              : ''
+        )
+        .filter(Boolean)
+    );
+
     const newUnlocked: string[] = [];
 
-    for (const ach of ACHIEVEMENTS) {
-      if (!currentUnlocked.has(ach.id) && ach.checkUnlocked(progress)) {
-        currentUnlocked.add(ach.id);
-        newUnlocked.push(ach.id);
+    for (const achievement of ACHIEVEMENTS) {
+      if (!currentUnlocked.has(achievement.id) && achievement.checkUnlocked(progress)) {
+        currentUnlocked.add(achievement.id);
+        newUnlocked.push(achievement.id);
       }
     }
 

@@ -19,6 +19,8 @@ def test_read_file():
 
 def test_process_data():
     assert process_data('test data') == 'TEST DATA'
+    assert process_data('') == ''
+    assert process_data('  leading and trailing spaces  ') == '  LEADING AND TRAILING SPACES  '
 
 def test_write_output():
     with patch('builtins.open', mock_open()):
@@ -32,6 +34,37 @@ def test_main():
         with patch('main.read_file', return_value='test data'):
             with patch('main.process_data', return_value='TEST DATA'):
                 with patch('main.write_output', return_value=True):
+                    with patch('sys.argv', ['python', 'main.py', 'input.txt']):
+                        main()
+                        assert True  # No assertion needed, just check if it runs without error
+
+    with patch('main.parse_arguments', return_value=None):
+        with patch('sys.argv', ['python', 'main.py']):
+            main()
+            assert True  # No assertion needed, just check if it runs without error
+
+    with patch('main.parse_arguments', return_value='nonexistent.txt'):
+        with patch('sys.argv', ['python', 'main.py', 'nonexistent.txt']):
+            main()
+            assert True  # No assertion needed, just check if it runs without error
+
+    with patch('main.parse_arguments', return_value='input.txt'):
+        with patch('main.read_file', return_value=None):
+            with patch('sys.argv', ['python', 'main.py', 'input.txt']):
+                main()
+                assert True  # No assertion needed, just check if it runs without error
+
+    with patch('main.parse_arguments', return_value='input.txt'):
+        with patch('main.read_file', return_value='test data'):
+            with patch('main.process_data', return_value=None):
+                with patch('sys.argv', ['python', 'main.py', 'input.txt']):
+                    main()
+                    assert True  # No assertion needed, just check if it runs without error
+
+    with patch('main.parse_arguments', return_value='input.txt'):
+        with patch('main.read_file', return_value='test data'):
+            with patch('main.process_data', return_value='TEST DATA'):
+                with patch('main.write_output', return_value=False):
                     with patch('sys.argv', ['python', 'main.py', 'input.txt']):
                         main()
                         assert True  # No assertion needed, just check if it runs without error

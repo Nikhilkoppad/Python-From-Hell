@@ -1,5 +1,6 @@
 import sys
 import logging
+import time
 from typing import Optional
 
 logging.basicConfig(level=logging.INFO)
@@ -25,7 +26,12 @@ def read_file(file_path: str) -> Optional[str]:
         return None
 
 def process_data(data: str) -> str:
-    return data.upper()
+    start_time = time.time()
+    processed_data = data.upper()
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    logger.info(f"Data processing time: {elapsed_time:.4f} seconds")
+    return processed_data
 
 def write_output(output: str, output_file: str) -> bool:
     try:

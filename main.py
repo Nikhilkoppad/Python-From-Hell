@@ -2,15 +2,16 @@ import sys
 import logging
 from typing import Optional
 
-# Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def parse_arguments(args: list) -> Optional[str]:
-    if len(args) != 2:
-        logger.error("Usage: python main.py <input_file>")
-        return None
-    return args[1]
+    if len(args) == 3 and args[1] == 'main.py':
+        return args[2]
+    elif len(args) == 2 and args[0] == 'main.py':
+        return args[1]
+    logger.error("Usage: python main.py <input_file>")
+    return None
 
 def read_file(file_path: str) -> Optional[str]:
     try:
@@ -24,7 +25,6 @@ def read_file(file_path: str) -> Optional[str]:
         return None
 
 def process_data(data: str) -> str:
-    # Placeholder for data processing logic
     return data.upper()
 
 def write_output(output: str, output_file: str) -> bool:

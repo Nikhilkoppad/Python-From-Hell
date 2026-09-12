@@ -54,6 +54,7 @@ export class AdaptiveLearningEngine {
       lessonId: input.lessonId,
       topicId: input.topicId,
       skillId: input.topicId,
+      challengeType,
       passed: input.passed,
       hintsUsed: input.hintsUsed,
       independent,

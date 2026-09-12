@@ -1,4 +1,4 @@
-import type { MasteryLevel, Skill, SkillEvidence } from "../types/learning";
+import type { ChallengeType, MasteryLevel, Skill, SkillEvidence } from "../types/learning";
 
 export class SkillMasteryEngine {
   public static createSkill(id: string, name: string, description: string, prerequisites: string[] = []): Skill {
@@ -9,7 +9,7 @@ export class SkillMasteryEngine {
     return { attempts: 0, successes: 0, failures: 0, independentSuccesses: 0, assistedSuccesses: 0, hintsUsed: 0, predictSuccesses: 0, debugSuccesses: 0, buildSuccesses: 0, explainSuccesses: 0, recentErrors: [], lastAttemptAt: undefined };
   }
 
-  public static evaluateTopic(attempts: Array<{ passed: boolean; hintsUsed?: number; independent?: boolean; errorType?: string; code?: string }>): { masteryLevel: MasteryLevel; mastery: number } {
+  public static evaluateTopic(attempts: Array<{ passed: boolean; hintsUsed?: number; independent?: boolean; errorType?: string; challengeType?: ChallengeType }>): { masteryLevel: MasteryLevel; mastery: number } {
     const evidence = this.createEmptyEvidence();
     evidence.attempts = attempts.length;
     evidence.successes = attempts.filter((attempt) => attempt.passed).length;
@@ -20,17 +20,30 @@ export class SkillMasteryEngine {
     evidence.recentErrors = attempts.filter((attempt) => !attempt.passed && attempt.errorType).map((attempt) => attempt.errorType as string).slice(-10);
     for (const attempt of attempts) {
       if (!attempt.passed) continue;
-      const code = attempt.code ?? '';
-      if (/\bprint\s*\(/.test(code)) evidence.buildSuccesses++;
-      if (/\b(if|for|while|try|except)\b/.test(code)) evidence.debugSuccesses++;
-      if (/\b(def|class)\b/.test(code)) evidence.explainSuccesses++;
-      if (/\b(range|for|while)\b/.test(code)) evidence.predictSuccesses++;
+      switch (attempt.challengeType) {
+        case 'PREDICT':
+        case 'TRACE':
+          evidence.predictSuccesses++;
+          break;
+        case 'DEBUG':
+        case 'FIX':
+          evidence.debugSuccesses++;
+          break;
+        case 'BUILD':
+        case 'BOSS':
+        case 'REFACTOR':
+          evidence.buildSuccesses++;
+          break;
+        case 'EXPLAIN':
+          evidence.explainSuccesses++;
+          break;
+      }
     }
     const mastery = this.calculateMastery(evidence);
     return { masteryLevel: this.getMasteryLevel(evidence, mastery), mastery };
   }
 
-  public static recordAttempt(skill: Skill, params: { passed: boolean; challengeType: 'PREDICT' | 'TRACE' | 'FIX' | 'DEBUG' | 'BUILD' | 'REFACTOR' | 'EXPLAIN' | 'BOSS'; hintsUsed: number; errorType?: string; independent?: boolean }): Skill {
+  public static recordAttempt(skill: Skill, params: { passed: boolean; challengeType: ChallengeType; hintsUsed: number; errorType?: string; independent?: boolean }): Skill {
     const evidence: SkillEvidence = { ...skill.evidence, recentErrors: [...skill.evidence.recentErrors] };
     evidence.attempts += 1; evidence.lastAttemptAt = Date.now(); evidence.hintsUsed += params.hintsUsed;
     if (params.passed) { evidence.successes += 1; if (params.independent && params.hintsUsed === 0) evidence.independentSuccesses += 1; else evidence.assistedSuccesses += 1; }

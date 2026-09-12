@@ -10,10 +10,18 @@ export interface AITutorRequest {
   profile?: LearningProfile | UserProgress; progress?: LearningProfile | UserProgress; failureCount?: number; hintsThisAttempt?: number;
 }
 export interface AITeacherResponse {
-  message: string; text?: string; source: 'LOCAL_OLLAMA' | 'LOCAL_FALLBACK'; mode?: AITutorMode; modelUsed?: string; providerUsed?: string; latencyMs?: number; category?: string;
+  message: string; text?: string; source: 'LOCAL_OLLAMA' | 'LOCAL_FALLBACK'; mode?: AITutorMode; modelUsed?: string; providerUsed?: string; latencyMs?: number; category?: string; error?: string;
   shouldTeach?: boolean; shouldDebug?: boolean; shouldRemoveScaffolding?: boolean;
 }
 export type AITutorResponse = AITeacherResponse;
+
+type GuidanceContext = AITutorRequest & {
+  code?: string;
+  concept?: string;
+  lessonTitle?: string;
+  failureCount?: number;
+  hintsThisAttempt?: number;
+};
 
 export class AITeacherService {
   static async requestGuidance(request: AITutorRequest): Promise<AITeacherResponse> {
@@ -24,21 +32,30 @@ export class AITeacherService {
     const lessonTitle = request.lessonTitle ?? 'Python lesson';
     const failureCount = request.failureCount ?? 0;
     const hintsThisAttempt = request.hintsThisAttempt ?? 0;
+    const context: GuidanceContext = { ...request, code, concept, lessonTitle, failureCount, hintsThisAttempt };
     const userMessage = LearnerContextManager.buildUserMessage({ mode: request.mode, lessonTitle, concept, code, terminalOutput: request.terminalOutput ?? '', runtimeError: request.runtimeError ?? '', expectedOutput: request.expectedOutput ?? '', userQuery: request.userQuery ?? '', failureCount, hintsThisAttempt });
 
-    if (!profile) return this.fallback({ ...request, code, concept, lessonTitle, failureCount, hintsThisAttempt });
+    if (!profile) return this.fallback(context);
     const systemPrompt = LearnerContextManager.buildSystemPrompt(profile);
     try {
       const health = await AIRouter.getClient().checkHealth();
-      if (!health.online) return this.fallback({ ...request, code, concept, lessonTitle, failureCount, hintsThisAttempt });
+      if (!health.online) return this.fallback(context, 'Ollama health check failed or gemma4:latest is not loaded.');
       const result = await AIRouter.routeAI({ systemPrompt, userPrompt: userMessage, temperature: request.mode === 'ROAST' ? 0.9 : 0.65, maxTokens: 700 });
+      if (!result.success || !result.content.trim()) {
+        const error = result.error ?? 'Ollama returned no content.';
+        console.warn('[Python From Hell] Local AI request failed:', error);
+        return this.fallback(context, error);
+      }
       const message = result.content.trim();
-      if (!message) return this.fallback({ ...request, code, concept, lessonTitle, failureCount, hintsThisAttempt });
       return { message, text: message, source: 'LOCAL_OLLAMA', mode: request.mode, modelUsed: result.modelUsed, providerUsed: result.providerUsed, latencyMs: result.latencyMs, category: result.category, shouldTeach: request.mode === 'DEBUG' || failureCount >= 2, shouldDebug: Boolean(request.runtimeError) || failureCount >= 2, shouldRemoveScaffolding: hintsThisAttempt === 0 && failureCount === 0 };
-    } catch { return this.fallback({ ...request, code, concept, lessonTitle, failureCount, hintsThisAttempt }); }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown local AI failure';
+      console.warn('[Python From Hell] Local AI exception:', message);
+      return this.fallback(context, message);
+    }
   }
 
-  private static fallback(request: AITutorRequest & { code?: string; concept?: string; lessonTitle?: string; failureCount?: number; hintsThisAttempt?: number }): AITeacherResponse {
+  private static fallback(request: GuidanceContext, aiError?: string): AITeacherResponse {
     const code = request.code ?? ''; const concept = request.concept ?? 'current Python concept'; const failureCount = request.failureCount ?? 0; const hintsUsed = request.hintsThisAttempt ?? 0; let message: string;
     switch (request.mode) {
       case 'DEBUG': message = request.runtimeError ? `JARVIS // DEBUG\n\nRead the final traceback line first.\n\n${request.runtimeError}\n\nFind the failing line and fix the smallest broken assumption.` : 'JARVIS // DEBUG\n\nTrace inputs, variables, conditions, loops, and final output one step at a time.'; break;
@@ -47,7 +64,8 @@ export class AITeacherService {
       case 'CHAT': message = 'JARVIS // LOCAL MODE\n\nGemma is unavailable right now. Ask about the current Python concept and we will dissect it.'; break;
       default: message = this.hintConcept(concept, code, hintsUsed);
     }
-    return { message, text: message, source: 'LOCAL_FALLBACK', mode: request.mode, modelUsed: 'local-fallback', providerUsed: 'ollama', shouldTeach: failureCount >= 2 || request.mode === 'EXPLAIN', shouldDebug: Boolean(request.runtimeError) || failureCount >= 2, shouldRemoveScaffolding: hintsUsed === 0 && failureCount === 0 };
+    if (aiError) message += `\n\nAI diagnostic: ${aiError}`;
+    return { message, text: message, source: 'LOCAL_FALLBACK', mode: request.mode, modelUsed: 'local-fallback', providerUsed: 'ollama', error: aiError, shouldTeach: failureCount >= 2 || request.mode === 'EXPLAIN', shouldDebug: Boolean(request.runtimeError) || failureCount >= 2, shouldRemoveScaffolding: hintsUsed === 0 && failureCount === 0 };
   }
 
   private static hintConcept(concept: string, code: string, hintsUsed: number): string {

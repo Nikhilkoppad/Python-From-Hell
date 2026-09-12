@@ -1,4 +1,4 @@
-import type { LearningProfile, Skill } from '../types/learning';
+import type { BehavioralPatterns, LearningProfile, Skill } from '../types/learning';
 
 export type TutorMode = 'HINT' | 'DEBUG' | 'EXPLAIN' | 'ROAST' | 'CHAT';
 
@@ -8,7 +8,13 @@ export class LearnerContextManager {
     const weakSkills = skills.filter((skill) => skill.weak || skill.mastery < 60).slice(0, 8);
     const masteredSkills = skills.filter((skill) => skill.masteryLevel === 'MASTERED').slice(0, 8);
     const repeatedErrors = skills.flatMap((skill) => skill.evidence.recentErrors.map((error) => ({ skill: skill.name, error }))).slice(-12);
-    const behavior = profile.behavioralPatterns ?? {};
+    const behavior: BehavioralPatterns = profile.behavioralPatterns ?? {
+      independentSuccessCount: 0,
+      assistedSuccessCount: 0,
+      averageHintsPerSuccess: 0,
+      repeatedErrorTypes: [],
+      preferredChallengeTypes: [],
+    };
 
     return `JARVIS // HELL PROCTOR
 PYTHON FROM HELL LEARNING ENGINE

@@ -38,12 +38,13 @@ export class AdaptiveLearningEngine {
     });
 
     const updatedSkills = { ...(input.profile.skills ?? {}), [input.topicId]: updatedSkill };
+    const difficulty = this.getDifficulty(input.code);
     const decision = this.decideNextAction(
       input.profile,
       updatedSkill,
       input.passed,
       challengeType,
-      this.getDifficulty(input.code),
+      difficulty,
       input.hintsUsed,
       input.errorType
     );
@@ -53,6 +54,7 @@ export class AdaptiveLearningEngine {
       lessonId: input.lessonId,
       topicId: input.topicId,
       skillId: input.topicId,
+      challengeType,
       passed: input.passed,
       hintsUsed: input.hintsUsed,
       independent,
@@ -63,6 +65,11 @@ export class AdaptiveLearningEngine {
       timestamp: now,
     };
 
+    const previousAttemptTimestamp = history.length > 0
+      ? history[history.length - 1]?.timestamp
+      : input.profile.lastActiveTimestamp;
+    const nextStreak = this.calculateStreak(Number(input.profile.streak ?? 1), previousAttemptTimestamp, now);
+
     const nextProfile: LearningProfile = {
       ...input.profile,
       skills: updatedSkills,
@@ -72,6 +79,8 @@ export class AdaptiveLearningEngine {
       successfulAttempts: (input.profile.successfulAttempts ?? 0) + (input.passed ? 1 : 0),
       independentSolves: (input.profile.independentSolves ?? 0) + (independent ? 1 : 0),
       totalHintsUsed: (input.profile.totalHintsUsed ?? 0) + input.hintsUsed,
+      xp: Number(input.profile.xp ?? 0),
+      streak: nextStreak,
       overallMastery: this.averageMastery(updatedSkills),
       currentTopicId: input.topicId,
       currentPhase: decision.phase ?? this.phaseForAction(decision.action),
@@ -117,7 +126,7 @@ export class AdaptiveLearningEngine {
     const evidence = skill.evidence;
     if (!passed) {
       const recentSameErrors = this.countRecentSameErrors(evidence.recentErrors, errorType);
-      if (recentSameErrors >= 2) return { action: 'MICRO_LESSON', reason: 'You are repeating the same mistake. Stop throwing new problems at the learner and reteach the missing concept.', skillId: skill.id, topicId: skill.id, phase: 'TEACH', confidence: 0.95, recommendedDifficulty: Math.max(1, difficulty - 1), removeHints: false };
+      if (recentSameErrors >= 2) return { action: 'TEACH_AGAIN', reason: 'You are repeating the same mistake. Stop throwing new problems at the learner and reteach the missing concept.', skillId: skill.id, topicId: skill.id, phase: 'TEACH', confidence: 0.95, recommendedDifficulty: Math.max(1, difficulty - 1), removeHints: false };
       if (evidence.failures >= 3) return { action: 'DEBUG_CHALLENGE', reason: 'Repeated failures detected. Switch from building code to diagnosing broken code.', skillId: skill.id, topicId: skill.id, phase: 'DEBUG', confidence: 0.9, recommendedDifficulty: Math.max(1, difficulty - 1), removeHints: false };
       if (hintsUsedThisAttempt > 0) return { action: 'EASIER_CHALLENGE', reason: 'The learner needed assistance and still failed. Reduce complexity before increasing difficulty.', skillId: skill.id, topicId: skill.id, phase: 'TEACH', confidence: 0.85, recommendedDifficulty: Math.max(1, difficulty - 1), removeHints: false };
       return { action: 'TEACH_AGAIN', reason: 'First failure detected. Explain the underlying mistake before giving another coding task.', skillId: skill.id, topicId: skill.id, phase: 'TEACH', confidence: 0.8, recommendedDifficulty: difficulty, removeHints: false };
@@ -155,6 +164,18 @@ export class AdaptiveLearningEngine {
   private static countEvidenceTypes(evidence: Skill['evidence']): number { return [evidence.predictSuccesses, evidence.debugSuccesses, evidence.buildSuccesses, evidence.explainSuccesses].filter((value) => value > 0).length; }
   private static countRecentSameErrors(errors: string[], errorType?: string): number { return !errorType ? 0 : errors.filter((error) => error === errorType).length; }
   private static averageMastery(skills: Record<string, Skill>): number { const values = Object.values(skills); return values.length ? Math.round(values.reduce((sum, skill) => sum + skill.mastery, 0) / values.length) : 0; }
-  private static phaseForAction(action: AdaptiveDecision['action']): LearningProfile['currentPhase'] { if (action === 'DEBUG_CHALLENGE') return 'DEBUG'; if (action === 'INDEPENDENT_CHALLENGE') return 'INDEPENDENT'; if (action === 'BOSS_CHALLENGE') return 'MASTERY'; if (action === 'MICRO_LESSON' || action === 'TEACH_AGAIN') return 'TEACH'; return 'PRACTICE'; }
+  private static calculateStreak(currentStreak: number, lastActiveTimestamp: unknown, now: number): number {
+    const last = typeof lastActiveTimestamp === 'string' || typeof lastActiveTimestamp === 'number' ? new Date(lastActiveTimestamp).getTime() : NaN;
+    if (!Number.isFinite(last)) return Math.max(1, currentStreak);
+    const lastDay = new Date(last);
+    const currentDay = new Date(now);
+    lastDay.setHours(0, 0, 0, 0);
+    currentDay.setHours(0, 0, 0, 0);
+    const dayGap = Math.round((currentDay.getTime() - lastDay.getTime()) / 86_400_000);
+    if (dayGap === 0) return Math.max(1, currentStreak);
+    if (dayGap === 1) return Math.max(1, currentStreak + 1);
+    return 1;
+  }
+  private static phaseForAction(action: AdaptiveDecision['action']): LearningProfile['currentPhase'] { if (action === 'DEBUG_CHALLENGE') return 'DEBUG'; if (action === 'INDEPENDENT_CHALLENGE') return 'INDEPENDENT'; if (action === 'BOSS_CHALLENGE') return 'MASTERY'; if (action === 'TEACH_AGAIN') return 'TEACH'; return 'PRACTICE'; }
   private static getDifficulty(code?: string): number { const complexity = (code?.match(/\b(if|elif|else|for|while|def|class|try|except)\b/g)?.length ?? 0); return Math.min(5, Math.max(1, 1 + Math.floor(complexity / 2))); }
 }

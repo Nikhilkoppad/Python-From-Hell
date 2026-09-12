@@ -16,6 +16,7 @@ interface ExecutionResponse {
 
 let runtime: PyodideInterface | null = null;
 let bootPromise: Promise<PyodideInterface> | null = null;
+let executionInProgress = false;
 
 const post = (message: ExecutionResponse) => self.postMessage(message);
 
@@ -24,19 +25,48 @@ const getRuntime = async (): Promise<PyodideInterface> => {
 
   bootPromise ??= loadPyodide({
     indexURL: `${self.location.origin}/pyodide/`,
-  }).then((loadedRuntime) => {
-    runtime = loadedRuntime;
-    post({ type: 'ready' });
-    return loadedRuntime;
-  });
+  })
+    .then((loadedRuntime) => {
+      runtime = loadedRuntime;
+      post({ type: 'ready' });
+      return loadedRuntime;
+    })
+    .catch((error) => {
+      bootPromise = null;
+      throw error;
+    });
 
   return bootPromise;
+};
+
+const formatExecutionError = (error: unknown): string => {
+  const message = String(error);
+  if (message && message !== '[object Object]') return message;
+
+  if (error instanceof Error) {
+    return error.stack || error.message || 'Python execution failed.';
+  }
+
+  return 'Python execution failed.';
 };
 
 self.onmessage = async (event: MessageEvent<ExecuteRequest>) => {
   if (event.data.type !== 'execute') return;
 
   const { requestId, code } = event.data;
+
+  if (executionInProgress) {
+    post({
+      type: 'result',
+      requestId,
+      stdout: '',
+      stderr: '',
+      error: 'Another Python execution is already in progress. Wait for it to finish, then retry.',
+    });
+    return;
+  }
+
+  executionInProgress = true;
   const stdout: string[] = [];
   const stderr: string[] = [];
 
@@ -45,7 +75,7 @@ self.onmessage = async (event: MessageEvent<ExecuteRequest>) => {
 
     pyodide.setStdout({ batched: (line) => stdout.push(line) });
     pyodide.setStderr({ batched: (line) => stderr.push(line) });
-    await pyodide.runPythonAsync(code);
+    await pyodide.runPythonAsync(`exec(${JSON.stringify(code)}, {})`);
 
     post({
       type: 'result',
@@ -59,7 +89,9 @@ self.onmessage = async (event: MessageEvent<ExecuteRequest>) => {
       requestId,
       stdout: stdout.join('\n'),
       stderr: stderr.join('\n'),
-      error: error instanceof Error ? error.message : String(error),
+      error: formatExecutionError(error),
     });
+  } finally {
+    executionInProgress = false;
   }
 };

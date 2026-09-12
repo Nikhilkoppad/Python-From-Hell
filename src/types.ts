@@ -10,7 +10,7 @@ export interface AIRoutingRecord { requestId: string; timestamp: string; categor
 export interface IncidentLog { id: string; timestamp: string; errorType: string; errorMessage: string; codeSnippet: string; lessonId: string; roastMessage: string; persona: string; repeatCount: number; levelTitle?: string; status?: string; }
 export interface EvaluationResult { passed: boolean; userOutput: string; errorType?: string; errorMessage?: string; roastMessage: string; explanation: string; fixHint: string; personaUsed: string; }
 export interface UserProgress {
-  id?: string; userId?: string; xp: number; streak: number; level: number; currentLessonId: string; currentChallengeIndex: number; completedLessons: string[]; masteredTopics?: string[]; weakTopics?: string[];
+  id?: string; userId?: string; xp: number; streak: number; level: number; currentLessonId: string; currentChallengeIndex: number; completedLessons: string[]; clearedBosses?: string[]; masteredTopics?: string[];
   roastIntensity: RoastIntensity | string; learningLanguage: LearningLanguage | string; diagnosticCompleted: boolean; incidents?: IncidentLog[] | unknown[]; achievements?: any[];
   topicStats?: Record<string, any>; topicMastery?: Record<string, number>; topicAccuracy?: Record<string, number>; topicRetention?: Record<string, number>; topicIndependentSolve?: Record<string, number>; hintDependency?: Record<string, number>; confidenceIndicators?: Record<string, number>; lastActiveTimestamp?: string | number;
   interviewReadiness: number; recommendations?: any[]; routingLogs?: any[]; aiTutor?: any; behavioralPatterns?: any; misconceptions?: any;

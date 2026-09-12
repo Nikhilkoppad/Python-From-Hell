@@ -440,7 +440,7 @@ export const CURRICULUM: Level[] = [
             difficulty: 2,
 
             instruction:
-              "Fix the code so it prints 50.",
+              "Fix the code so it prints 30.",
 
             starterCode:
               "score = 20\nscore = score + 10\nprint(scores)\n",

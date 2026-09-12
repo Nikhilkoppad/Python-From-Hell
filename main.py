@@ -14,12 +14,18 @@ def parse_arguments(args: list) -> Optional[str]:
     logger.error("Usage: python main.py <input_file>")
     return None
 
-def read_file(file_path: str) -> Optional[str]:
+def read_file(file_path: str) -> Optional[Union[str, dict]]:
     try:
         with open(file_path, 'r') as file:
-            return file.read()
+            content = file.read()
+            if file_path.endswith('.json'):
+                return json.loads(content)
+            return content
     except FileNotFoundError:
         logger.error(f"File not found: {file_path}")
+        return None
+    except json.JSONDecodeError:
+        logger.error(f"Error decoding JSON file: {file_path}")
         return None
     except Exception as e:
         logger.error(f"Error reading file: {e}")

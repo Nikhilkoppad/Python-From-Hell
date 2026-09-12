@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, mock_open
-from main import parse_arguments, read_file, process_data, write_output, main
+from main import parse_arguments, read_file, process_data, write_output, main, json
 
 def test_parse_arguments():
     assert parse_arguments(['python', 'main.py', 'input.txt']) == 'input.txt'
